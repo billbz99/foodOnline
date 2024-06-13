@@ -1,1 +1,629 @@
-Testing Testing
+{% extends 'dashboard/base_dashboard.html' %}
+{% load project_tags %}
+
+{% block content %}
+    <div class="row dashboard-header">
+        {% with field=form.dashboard %}
+            <div class="col-md-3 col-print-3">
+                <div id="dashboard-title" class="header-item">
+                    {{ dashboard.title }}
+                </div>
+                {% if field.field.choices|length > 1 %}
+                    <div class="header-item small">
+                        <a data-bs-toggle="modal" data-bs-target="#change-dashboard-modal">
+                            Change Dashboard
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-3 col-print-3 d-none create-widgets-container create-widgets-container-header">
+                <div class="header-item">
+                    <span id="widget-number">{{ widget_number }}</span> Widgets
+                </div>
+                <div class="header-item small">
+                    <a data-bs-toggle="modal" id="add-widget" data-bs-target="#add-widget-modal">
+                        Add Widget
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-print-3">
+                <div class="header-item">
+                    {% now 'n/j/y' %}
+                </div>
+                <div class="header-item small">
+                    {% now 'l' %}
+                </div>
+            </div>
+
+            {% if user|has_permission:'can_share_reports' %}
+                <div class="col-md-3 col-print-3">
+                    <div id="share-status" class="header-item">
+                        Private
+                    </div>
+                    <div class="header-item small">
+                        <a data-bs-toggle="modal" id="share-button" data-bs-target="#share-dashboard-modal">
+                            Share Settings
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+        <a href="javascript:void(0)" id="refresh-dashboard">Refresh Dashboard</a>
+        <a href="javascript:void(0)" id="clear-filters">Clear Filters</a>
+    </div>
+
+    <div class="widgets">
+        <div id="widgets" style="padding: 0px;"></div>
+
+        <div class="col-12 col-sm-6 col-lg-4 d-none create-widgets-container create-widgets-container-list">
+            <div  class="add-widget-placeholder">
+                <button role="button" title="Add a new widget" id="add-widget-button" class="btn btn-primary btn-round" data-bs-toggle="modal" data-bs-target="#add-widget-modal">
+                    <i class="fa fa-plus fa-fw"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    {% with modal_id='add-widget-modal' modal_title='Create new widget' modal_dismiss_button='Cancel' modal_confirm_button='Add' modal_desc='Select a widget from the list below and then press the ‘Add’ button to add it to your dashboard.' %}
+        {% include 'pilot_v2/fragments/generic/modal.html'  with modal_extra_class='modal-xl' %}
+    {% endwith %}
+    {% with modal_id='share-dashboard-modal' modal_title='Sharing dashboard' modal_dismiss_button='Cancel' modal_confirm_button='Share' %}
+        {% include 'pilot_v2/fragments/generic/modal.html'  with modal_extra_class='modal-xl' %}
+    {% endwith %}
+    {% with modal_id='change-dashboard-modal' modal_title='Change dashboard' modal_dismiss_button='Cancel' modal_confirm_button='Select' %}
+        {% include 'pilot_v2/fragments/generic/modal.html'  with modal_extra_class='modal-xl' %}
+    {% endwith %}
+    {% with modal_id='delete-widget-modal' modal_title='Are you sure you want to delete this widget?' modal_dismiss_button='Cancel' modal_confirm_button='Delete' %}
+        {% include 'pilot_v2/fragments/generic/delete_modal.html'  with modal_extra_class='modal-xl'%}
+    {% endwith %}
+{% endblock %}
+
+
+
+{% block extra_js %}
+    {{ block.super }}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl, {
+                container: 'body' // Specify custom container
+            });
+        });
+        });
+
+        currentDashboard = {{ dashboard.id }};
+        selectedDashboard = {{ dashboard.id }};
+        myDashboards = {{ my_dashboards|safe }};
+        canModifyDashboards = "{{ user|has_permission:'can_modify_assigned_dashboards' }}";
+        canCreateOwnDashboards = "{{ user|has_permission:'can_create_own_dashboards' }}";
+        dashboard_version = {{ dashboard_version }};
+        console.log('DASHBOARD VERSION: ' + dashboard_version);
+
+        function get_spinner(height) {
+            if (height) {
+                return '<div class="loading-spinner" style="height: ' + height + 'px"><i class="fa fa-spinner fa-pulse fa-3x fa-fw margin-bottom"></i></div>';
+            } else {
+                return '<div class="loading-spinner"><i class="fa fa-spinner fa-pulse fa-4x fa-fw margin-bottom"></i></div>';
+            }
+        }
+
+        function changeEditionMode(mode) {
+            var value = $("#id_dashboard").val();
+            if (value == currentDashboard) {
+                if (canModifyDashboards && canModifyDashboards === "True" && $.inArray(value, myDashboards) === -1) {
+                    $('#div_id_create_copy').removeClass('hide');
+                    $('.control-label', '#div_id_create_copy').text('Create a copy');
+                } else {
+                    $('#div_id_create_copy').addClass('hide');
+                    $('#id_create_copy').attr('checked', false);
+                }
+
+                $('#add-widget-button').prop('disabled', false);
+                $('#add-widget').removeAttr("disabled");
+                $('#share-button').removeAttr("disabled");
+            } else if ($.inArray(value, myDashboards) >= 0){
+                $('#div_id_create_copy').removeClass('hide');
+                $('.control-label', '#div_id_create_copy').text('Set default');
+
+                $('#add-widget-button').prop('disabled', false);
+                $('#add-widget').removeAttr("disabled");
+                $('#share-button').removeAttr("disabled");
+            } else if (canModifyDashboards === "True") {
+                $('#div_id_create_copy').removeClass('hide');
+                $('.control-label', '#div_id_create_copy').text('Create a copy');
+
+                $('#add-widget-button').prop('disabled', true);
+                $('#add-widget').attr("disabled", "disabled");
+                $('#share-button').attr("disabled", "disabled");
+            } else {
+                $('#div_id_create_copy').addClass('hide');
+                $('#id_create_copy').attr('checked', false);
+
+                $('#add-widget-button').prop('disabled', true);
+                $('#add-widget').attr("disabled", "disabled");
+                $('#share-button').attr("disabled", "disabled");
+            }
+
+/*             if (value == currentDashboard) {
+                $('#div_id_create_copy').addClass('hide');
+                $('#id_create_copy').attr('checked', false);
+
+                $('#add-widget-button').prop('disabled', false);
+                $('#add-widget').removeAttr("disabled");
+                $('#share-button').removeAttr("disabled");
+            } else if ($.inArray( value, myDashboards ) >= 0){
+                $('#div_id_create_copy').removeClass('hide');
+                $('.control-label', '#div_id_create_copy').text('Set default');
+
+                $('#add-widget-button').prop('disabled', false);
+                $('#add-widget').removeAttr("disabled");
+                $('#share-button').removeAttr("disabled");
+            } else {
+                $('#div_id_create_copy').removeClass('hide');
+                $('.control-label', '#div_id_create_copy').text('Create a copy');
+
+                $('#add-widget-button').prop('disabled', true);
+                $('#add-widget').attr("disabled", "disabled");
+                $('#share-button').attr("disabled", "disabled");
+            } */
+        }
+
+        function applyFilters($widget){
+            alert('applyFilters clicked1')
+            var url = $widget.data('url');
+            console.log("testing")
+            console.log({url})
+            var $form = $('form', $widget);
+            var dashboardId = $("#id_dashboard").val();
+            var update_all_widgets = $form.find("#update_all_widgets").prop('checked');
+            $form.find("#update_all_widgets").prop('checked',false);
+            console.log('UPDATE ALL: ' + update_all_widgets);
+            $widget.html(get_spinner(280));
+            var cookieValue = $form.serialize()
+            if (cookieValue == undefined)
+                cookieValue = ''
+            Cookies.set($widget.attr("id") + "-{{ request.user.id }}", cookieValue);
+            if (cookieValue != '')
+                if (update_all_widgets == true)
+                     cookieValue = cookieValue + '&type=filters&update_all_widgets=true';
+                else
+                    cookieValue = cookieValue + '&type=filters';
+            else
+                if (update_all_widgets == true)
+                    cookieValue = cookieValue + '?type=filters&update_all_widgets=true';
+                else
+                    cookieValue = cookieValue + '?type=filters';
+            dashboard_version = dashboard_version + 1
+            cookieValue = cookieValue + '&v=' + dashboard_version
+            console.log('applyFilters: ' + url)
+            console.log('applyFilters: ' + cookieValue)
+            $.ajax({
+                data: cookieValue,
+                type: "GET",
+                url: $form.attr('action'),
+                success: function(response) {
+                    if (update_all_widgets == true) {
+                        console.log('REFRESH PAGE!');
+                        refreshWidgetsContent('refresh');
+                    } else {
+                        applyWidgetLogic($widget, response);
+                        updateViewAllQueryParams($widget);
+                    }
+                }
+            });
+        }
+
+        function updateViewAllQueryParams($widget) {
+            var $form = $('form', $widget);
+            var $inputs = $(':input', $form);
+            var params = {};
+            $inputs.each(function() {
+                if (this.name != 'csrfmiddlewaretoken'){
+                    params[this.name] = $(this).val();
+                }
+            });
+
+            var $viewAllLink = $('.widget-view-all-link', $widget);
+            var queryParams = $.param( params );
+            var url = $viewAllLink.data('href') + '?' + queryParams;
+
+            $viewAllLink.attr('href', url);
+            $viewAllLink.attr('data-params', queryParams);
+
+            //if extraparams in child anchor of widget
+            var $open_cases_link = $('span .widget-view-all-link', $widget);
+            $open_cases_link.each(function() {
+                var extraparams = $(this).data('extraparams');
+                if (extraparams) {
+                  url = $(this).attr('href') + '&' + extraparams;
+                  $(this).attr('href', url);
+                }
+            });
+
+            var $legend = $('.graph-legend', $widget);
+            var $legendLink = $('a', $legend);
+            $legendLink.each(function() {
+                url = $(this).data('href') + '&' + queryParams;
+                $(this).attr('href', url);
+            });
+        }
+
+        function applyWidgetLogic($target, response) {
+            $target.html(response);
+
+            $(".popover-widget", $target).each(function () {
+                var popoverTarget = '#' + $(this).attr("id") + '-content';
+                var popoverInstance = new bootstrap.Popover(this, {
+                    html: true,
+                    container: "body",
+                    placement: $target.hasClass("widget-left") ? "right" : "left",
+                    trigger: 'click',
+                    content: function () {
+                        return 'Loading...';
+                    }
+                });
+
+                $(this).on('shown.bs.popover', function () {
+                    $(".popover .popover-body").html($(popoverTarget).html());
+                    $('select', ".popover .popover-body").selectize({
+                        onChange: function(value) {
+                            var thisSelect = this.$input;
+                            var staffSelect = thisSelect.closest('form').find("#id_user");
+                            if (staffSelect.length > 0 && thisSelect.attr('id') == "id_client") {
+                                staffSelect = staffSelect.selectize();
+                                var $staffSelectize = staffSelect[0].selectize;
+
+                                // The client has changed, and we have a staff dropdown
+                                // so populate the staff dropdown with staff linked to that client
+                                $.ajax({
+                                    data: {client_id: value},
+                                    url: "{% url 'get_staff_for_client' %}",
+                                    success: function(results) {
+                                        $staffSelectize.clear();
+                                        $staffSelectize.clearOptions();
+                                        $staffSelectize.load(function(callback) {
+                                            callback(results.users);
+                                        });
+                                    },
+                                    error: function() {
+                                        console.log('error');
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    $('.confirm-button', ".popover .popover-body").click(function (e) {
+                        $(popoverTarget).html('');
+                        applyFilters($target);
+                    });
+                    $('.close-button', ".popover .popover-body").click(function (e) {
+                        alert('close button clicked');
+                        popoverInstance.hide();
+                    });
+                    $('.input-daterange', ".popover .popover-body").datepicker({
+                        todayBtn: "linked",
+                        autoclose: true
+                    });
+                });
+            });
+
+            updateViewAllQueryParams($target);
+        }
+
+        function getQuarterHour() {
+            var date = new Date();
+            // Getting minutes
+            var mins = date.getMinutes();
+
+            // Getting hours
+            var hrs = date.getHours();
+            var m = (parseInt((mins + 7.5) / 15) * 15) % 60;
+
+            // Converting '09:0' to '09:00'
+            m = m < 10 ? '0' + m : m;
+            var h = mins > 52 ? (hrs === 23 ? 0 : ++hrs) : hrs;
+
+            // Converting '9:00' to '09:00'
+            h = h < 10 ? '0' + h : h;
+            return  h + ":" + m;
+        }
+
+        function refreshWidgetContent($widget, $theAction) {
+            var url = $widget.data('url');
+            var $target = $('#widget-' + $widget.data("id"));
+            $target.html(get_spinner(330));
+            var cookieValue = Cookies.get($target.attr("id") + "-{{ request.user.id }}");
+            if (cookieValue == undefined)
+                cookieValue = 'type=' + $theAction + '&v=' + dashboard_version;
+            else
+                cookieValue = cookieValue + '&type=' + $theAction + '&v=' + dashboard_version;
+
+            if ($theAction == 'clear')
+                cookieValue = cookieValue + '&update_all_widgets=true';
+
+            console.log('refreshWidgetContent: ' + url)
+            console.log('refreshWidgetContent: ' + cookieValue)
+            $.ajax({
+                data: cookieValue,
+                type: "GET",
+                url: url,
+                target: $target,
+                success: function (response) {
+                   applyWidgetLogic($target, response);
+                }
+           });
+        }
+
+        function refreshWidgetsContent($theAction) {
+            $('.widget').each(function() {
+                refreshWidgetContent($(this),$theAction);
+            });
+        }
+
+        function refreshWidgets(dashboardId) {
+            var url_template = "{% url 'dashboard_widgets' 0 %}";
+            var url = url_template.replace ('/0/', '/' + dashboardId + '/');
+            $.ajax({
+                type: "GET",
+                url: url,
+                success: function (response) {
+                    $('#widgets').html(response);
+                    refreshWidgetsContent('refresh');
+                }
+            });
+        }
+
+        $('#add-widget-modal').on('show.bs.modal', function(e) {
+            $('#add-widget-modal .modal-body').html('Loading...');
+        });
+
+        $('#add-widget-modal').on('shown.bs.modal', function(e) {
+            if ($.inArray(selectedDashboard + "", myDashboards) === -1 && canModifyDashboards) {
+                $('#add-widget-modal .modal-body').html("In order to add a new widget to this dashboard, you need to first create a copy. Create a copy now?");
+                $('#add-widget-modal .modal-description').html("");
+                $('#add-widget-modal .modal-confirm-button').html("Create copy");
+            } else {
+                $('#add-widget-modal .modal-description').html("Select a widget from the list below and then press the ‘Add’ button to add it to your dashboard.");
+                var url_template = "{% url 'add_widget' 0 %}";
+                var url = url_template.replace ('/0/', '/' + selectedDashboard + '/');
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    success: function (response) {
+                        $('#add-widget-modal .modal-body').html(response);
+                        var selectize = $("#add-widget-modal #id_widget")[0].selectize;
+                        $("#add-widget-modal #div_id_staff").hide();
+                        selectize.on('change', function(value) {
+                        	if (value === "staffscorecardupwidget") {
+                        	    $("#add-widget-modal #div_id_staff").show();
+                        	} else {
+                        	    $("#add-widget-modal #div_id_staff").hide();
+                        	}
+                        });
+                    }
+                });
+            }
+        });
+
+        $('#add-widget-modal .modal-confirm-button').click(function(e) {
+            e.preventDefault();
+            if ($.inArray(selectedDashboard + "", myDashboards) === -1 && canModifyDashboards) {
+                var url = "{% url 'change_dashboard' %}";
+                $.ajax({
+                    data: {
+                         "create_copy": "on",
+                         "dashboard": currentDashboard,
+                         "csrfmiddlewaretoken": csrftoken
+                    },
+                    type: "POST",
+                    url: url,
+                    success: function(response) {
+                        $('#change-dashboard-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'reload'){
+                            $('#change-dashboard-modal').modal('hide');
+                            location.reload()
+                        }
+                    }
+                });
+            } else {
+                var $form = $('#add-widget-modal form');
+                $("i.fa-spinner", $(this)).show();
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#add-widget-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok'){
+                            $('#add-widget-modal').modal('hide');
+                            refreshWidgets(selectedDashboard);
+                        } else {
+                            $('#add-widget-modal .modal-body').html(response);
+                        }
+                        $("i.fa-spinner", $(this)).hide();
+                    }
+                });
+            }
+        });
+
+        $('#change-dashboard-modal').on('show.bs.modal', function(e) {
+            $('#change-dashboard-modal .modal-body').html('Loading...');
+        });
+
+        $('#change-dashboard-modal').on('shown.bs.modal', function(e) {
+            var dashboardId = $("#id_dashboard").val();
+            var url = '{% url 'change_dashboard' %}';
+            $.ajax({
+                type: "GET",
+                url: url,
+                success: function (response) {
+                    $('#change-dashboard-modal .modal-body').html(response);
+                    $('#div_id_create_copy').addClass('hide');
+
+                    $("#id_dashboard").selectize({
+                        dropdownParent: 'body'
+                    }).on('change', function () {
+                        var value = $("#id_dashboard").val();
+                        changeEditionMode($.inArray( value, myDashboards ) >= 0);
+                    });
+
+                    var $selectize = $('#id_dashboard').selectize();
+                    var selectizeControl = $selectize[0].selectize;
+                    selectizeControl.addItem(selectedDashboard);
+                }
+            });
+        });
+
+        $('#change-dashboard-modal .modal-confirm-button').click(function(e) {
+            e.preventDefault();
+            var $form = $('#change-dashboard-modal form');
+            $.ajax({
+                data: $form.serialize(),
+                type: "POST",
+                url: $form.attr('action'),
+                success: function(response) {
+                    $('#change-dashboard-modal .fa-spinner').addClass("hidden");
+                    if (response.result === 'reload') {
+                        $('#change-dashboard-modal').modal('hide');
+                        location.reload()
+                    } else if (response.result === 'ok') {
+                        var value = $("#id_dashboard").val();
+                        selectedDashboard = currentDashboard = value;
+                        refreshWidgets(value);
+
+                        $('#dashboard-title').html(response.dashboard_title);
+                        if (response.is_shared){
+                            $('#share-status').html('Shared');
+                        } else{
+                            $('#share-status').html('Private');
+                        }
+                        $('#widget-number').html(response.widget_number);
+
+                        $('#change-dashboard-modal').modal('hide');
+                    } else {
+                        $('#change-dashboard-modal .modal-body').html(response);
+                    }
+                    handlePermissions(selectedDashboard);
+                    $('#add-widget').removeAttr("disabled");
+                    $('#add-widget-button').removeAttr("disabled");
+                }
+            });
+        });
+
+        $('#share-dashboard-modal').on('show.bs.modal', function(e) {
+            $('#share-dashboard-modal .modal-body').html('Loading...');
+        });
+
+        $('#share-dashboard-modal').on('shown.bs.modal', function(e) {
+            var url_template = '{% url 'share_dashboard' 0 %}';
+            var url = url_template.replace ('/0/', '/' + selectedDashboard + '/');
+            $.ajax({
+                type: "GET",
+                url: url,
+                data: {dashboard: selectedDashboard},
+                success: function (response) {
+                    $('#share-dashboard-modal .modal-body').html(response);
+                }
+            });
+        });
+
+        $('#share-dashboard-modal .modal-confirm-button').click(function(e) {
+            e.preventDefault();
+            var $form = $('#share-dashboard-modal form');
+            $.ajax({
+                data: $form.serialize(),
+                type: "POST",
+                url: $form.attr('action'),
+                success: function(response) {
+                    $('#share-dashboard-modal .fa-spinner').addClass("hidden");
+                    if (response.result === 'ok'){
+                        $('#share-dashboard-modal').modal('hide');
+
+                        if (response.is_shared){
+                            $('#share-status').html('Shared')
+                        } else{
+                            $('#share-status').html('Private')
+                        }
+
+                        $('#widget-number').html(response.widget_number)
+
+
+                    } else {
+                        $('#share-dashboard-modal .modal-body').html(response);
+                    }
+                }
+            });
+        });
+
+        var handlePermissions = function(widget) {
+            if ($.inArray(widget + "", myDashboards) >= 0) {
+                $(".create-widgets-container").removeClass("hide");
+            } else if (canModifyDashboards === "True") {
+                $(".create-widgets-container").removeClass("hide");
+            } else {
+                $(".create-widgets-container").addClass("hide");
+            }
+        };
+
+        refreshWidgets(currentDashboard);
+        handlePermissions(currentDashboard);
+
+        var widgetTitle, widgetDeleteURL, widgetModel;
+        $("body").on("click", ".delete-widget", function() {
+        	widgetTitle = $(this).data('bs-title');
+        	widgetDeleteURL = $(this).data('bs-href');
+        	widgetModel = $(this).data('model');
+        	$('#delete-widget-modal').modal('show');
+        });
+
+        $('#delete-widget-modal').on('show.bs.modal', function(e) {
+            $('#delete-widget-modal .modal-confirm-button').data('href', widgetDeleteURL);
+            $('#delete-widget-modal .modal-body-intro').html(
+                'You are about to delete ' + widgetTitle +', this procedure is irreversible.'
+            );
+        });
+
+        $('#delete-widget-modal .modal-confirm-button').click(function(e){
+            var url = $(e.target).data('href');
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: {
+                    "csrfmiddlewaretoken": csrftoken,
+                    "model_name": widgetModel
+                },
+                success: function(response) {
+                    $('#delete-widget-modal .fa-spinner').addClass("hidden");
+                    $('#delete-widget-modal').modal('hide');
+                    refreshWidgets(currentDashboard);
+                }
+            });
+        });
+
+        $("#clear-filters").click(function() {
+        	$(".widget").each(function(index, obj) {
+        		Cookies.remove($(obj).attr("id") + "-{{ request.user.id }}");
+        	});
+            dashboard_version = dashboard_version + 1
+        	refreshWidgetsContent('clear');
+        });
+
+        $(document).ready(function() {
+            setTimeout(function(){ refreshWidgetsContent('refresh'); }, 5000);
+        });
+
+        $("#refresh-dashboard").click(function() {
+            refreshWidgetsContent('refresh');
+        });
+
+        $("body").on("click", ".clear-widget-filters", function() {
+            var $element = $(this).parents(".widget");
+            Cookies.remove($element.attr("id") + "-{{ request.user.id }}");
+            refreshWidgetContent($element,'clear');
+        });
+
+    </script>
+{% endblock %}
