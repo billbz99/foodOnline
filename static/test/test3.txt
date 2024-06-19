@@ -1,0 +1,150 @@
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" role="dialog" aria-labelledby="label-{{ modal_id }}">
+    {% if modal_extra_class %}
+    <div class="modal-dialog {{ modal_extra_class }}" role="document">
+    {% else %}
+    <div class="modal-dialog modal-xl" role="document">
+    {% endif %}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="label-{{ modal_id }}">{{ modal_title }}</h4>
+                <button type="button" class="btn-close closefirstmodal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body-intro">
+                {% block modal_intro %}
+                    {% if not hide_description %}
+                        <p class="modal-description">
+                            {% if modal_desc %}
+                                {{ modal_desc }}
+                            {% else %}
+                                Complete the form below, pressing the 'Save' button once complete.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                {% endblock %}
+            </div>
+            {% block modal_body %}
+                <div class="modal-body">
+                    {% block modal_body_content %}{{ modal_content }}{% endblock %}
+                </div>
+            {% endblock %}
+            {% block modal_footer %}
+            <div class="modal-footer">
+                {% if not hide_close_button %}
+                    <button type="button" class="modal-close-button btn btn-round btn-default pull-left closefirstmodal">{{ modal_dismiss_button|default:'Close' }}</button>
+                {% endif %}
+                <button type="button" class="modal-confirm-button btn btn-round btn-green ms-auto" {% if confirm_closes_modal %}data-bs-dismiss="modal"{% endif %}>
+                    {{ modal_confirm_button|default:'Save changes' }}
+                    <i class="fa fa-spinner fa-spin hidden"></i>
+                </button>
+            </div>
+            {% endblock %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal With Warning -->
+<div id="warning-{{ modal_id }}" tabindex="1" class="modal fade" role="dialog" data-bs-backdrop="false">
+    <div class="modal-dialog modal-xl">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-body">
+                <p>This is a warning message all filled data will be empty</p>
+                <button type="button" class="btn btn-danger confirmclosed">Confirm Close88</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cancel Close99</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        function update_resource_type(value, resourceTypeValue) {
+            $.ajax({
+                data: {sdh_type: value},
+                url: "{% url 'get_community_resource_types' %}",
+                success: function(results) {
+                    var $resourceTypeSelectize = $('#id_community_resource_type').selectize();
+                    var $resourceTypeSelectizeControl = $resourceTypeSelectize[0].selectize;
+                    $resourceTypeSelectizeControl.clear();
+                    $resourceTypeSelectizeControl.clearOptions();
+                    $resourceTypeSelectizeControl.load(function(callback) {
+                        callback(results.resource_types);
+                    });
+                    if (resourceTypeValue && parseInt(resourceTypeValue) > 0) {
+                        var reasonFound = false;
+                        // If we've pre-set the value of the reasons field (i.e. because we're updating the record)
+                        // then we want to probably show that as the selected value after this list has re-populated it-self
+                        for (var x=0; x < results.resource_types.length; x ++) {
+                            if (results.resource_types[x].value === parseInt(resourceTypeValue)) {
+                                $resourceTypeSelectizeControl.addItem(resourceTypeValue);
+                                reasonFound = true;
+                                break;
+                            }
+                        }
+                        if (!reasonFound) {
+                            $resourceTypeSelectizeControl.addItem(results.resource_types[0].value);
+                        }
+                    }
+                    else {
+                      $resourceTypeSelectizeControl.addItem(results.resource_types[0].value);
+                    }
+                },
+                error: function() {
+                    console.log('Error - modal.html:89');
+                }
+            });
+        }
+
+        var sdhSelectizeControl = $('#id_social_determinants_of_health').selectize();
+        if (sdhSelectizeControl) {
+            sdhSelectizeControl.on('change', function (value) {
+                if (value) {
+                    update_resource_type($('#id_social_determinants_of_health').val(), value);
+                } else {
+                    var $resourceTypeSelectize = $('#id_community_resource_type').selectize();
+                    var $resourceTypeSelectizeControl = $resourceTypeSelectize[0].selectize;
+                    $resourceTypeSelectizeControl.clear();
+                }
+            });
+
+            if ($('#id_social_determinants_of_health').val()) {
+                update_resource_type($('#id_social_determinants_of_health').val(), $('#id_community_resource_type').val());
+            }
+        }
+
+    });
+</script>
+
+{% if not confirm_closes_modal %}
+    <script>
+        $(function() {
+            // $.fn.modal.Constructor.DEFAULTS.backdrop = 'static';
+            
+            bootstrap.Modal.Default.backdrop = 'static';
+        });
+    	$(document).ready(function() {
+    	    var $spinner = $('#{{ modal_id }} .fa-spinner');
+    	    $('#{{ modal_id }}').on('show.bs.modal', function(e) {
+    	        $spinner.addClass("hidden");
+                $('#{{ modal_id }} .modal-confirm-button').css('pointer-events', 'auto'); // Added to re-enable clicks
+            });
+    	    $('#{{ modal_id }} .modal-confirm-button').click(function() {
+    	        $spinner.removeClass("hidden");
+                $(this).css('pointer-events', 'none'); // Added to prevent multiple clicks (see above ^^^)
+                setTimeout(function(){
+                    $('#{{ modal_id }} .modal-confirm-button').css('pointer-events', 'auto'); // Added to re-enable clicks
+                }, 2000);
+    	    });
+    	});
+
+        $('#{{ modal_id }} .closefirstmodal').click(function () { //Close Button on Form Modal to trigger Warning Modal
+            $('#warning-{{ modal_id }}').modal('show').on('show.bs.modal', function () { //Show Warning Modal and use `show` event listener
+            });
+            $('#warning-{{ modal_id }} .confirmclosed').click(function () { //Waring Modal Confirm Close Button
+                $('#warning-{{ modal_id }}').modal('hide'); //Hide Warning Modal
+                $('#{{ modal_id }}').modal('hide'); //Hide Form Modal
+            });
+        });
+
+    </script>
+{% endif %}
