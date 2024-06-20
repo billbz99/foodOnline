@@ -1,0 +1,171 @@
+{% load project_tags %}
+<div class="row">
+    <div class="col-xs-12" id="event-task">
+                    <h4 class="m-b-sm">
+                        Task
+                    </h4>
+                    <!-- <div id="task-list" class="filtered-checkbox-list"></div> -->
+                    {% if user|has_permission:'add_task' %}
+                    <div class="input-group add-new-group-input task-list-new-task">
+                        <input id="task-input" type="text" class="form-control" placeholder="Create New task">
+                        <span class="input-group-btn">
+                            {% if object_name == "Discharge  Order  Medication" %}
+                                <button id="add-task" data-href="{% url 'event_inpatient_episode_create_task' object.related_to_episode.patient.id object.related_to_episode.id %}" data-toggle="modal" class="btn btn-default" type="button">ENTER</button>
+                            {% else %}
+                                {% if episode_id %}
+                                    <button id="add-task" data-href="{% url 'event_inpatient_episode_create_task' sidebar_obj.id episode_id %}" data-toggle="modal" class="btn btn-default" type="button">ENTER</button>
+                                {% else %}
+                                    <button id="add-task" data-href="{% url 'event_inpatient_episode_create_task' object.episode.patient.id object.episode.id %}" data-toggle="modal" class="btn btn-default" type="button">ENTER</button>
+                                {% endif %}
+        	                {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <h4 class="m-b-sm">
+
+                    </h4>
+                    <h4 class="m-b-sm">
+
+                    </h4>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+    	{% if request.user|has_permission:'add_task' %}
+        	$('#add-task-modal').on('show.bs.modal', function(e) {
+                $('#add-task-modal .modal-body').html('Loading...');
+            });
+
+            $('#add-task-modal').on('shown.bs.modal', function(e) {
+                var url = $(e.relatedTarget).data('href');
+
+                var task_name = $('#task-input').val();
+                $('#task-input').val('');
+                var data = {
+                    task_name: task_name,
+                    object: "{{ object }}"
+                };
+
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    data: data,
+                    success: function (response) {
+                        $('#add-task-modal .modal-body').html(response);
+                        $('#add-task-modal .formset').formset({
+                            added: function (form) {
+                                $form = $(form);
+                                $('select', $form).selectize();
+                                var $cloned = $('.datepicker', $form).clone();
+                                $('.datepicker', $form).remove();
+                                $("[id$=due_date] .control-input", $form).append($cloned);
+                                $('.datepicker', $form).datepicker({
+                                    autoclose:true,
+                        		    todayHighlight: true,
+                        		    showOnFocus: false
+                    		    });
+                                $(".datepicker", $form).datepicker().on('show.bs.modal', function(event) {
+                                    // prevent datepicker from firing bootstrap modal "show.bs.modal"
+                                    event.stopPropagation();
+                                });
+                            },
+                            addText: "Create new subtask"
+                        });
+                        /* fix formset */
+                        var $first_formset = $('#add-task-modal .formset:first');
+                        if (!$first_formset.find('#id_form-0-id').val()) {
+                            $first_formset.find('.delete-row').click()
+                        }
+                        $('#add-task-modal select').selectize();
+                    }
+                });
+            });
+
+            $('#add-task-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#add-task-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#add-task-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok') {
+                            $('#add-task-modal').modal('hide');
+                            $('body').removeClass('modal-open');
+                            $('.modal-backdrop').remove();
+                            // refreshTasks();
+                        } else {
+                            $('#add-task-modal .modal-body').html(response);
+                            $('#add-task-modal .formset').formset({
+                                added: function (form) {
+                                    $form = $(form);
+                                    $('select', $form).selectize();
+                                    var $cloned = $('.datepicker', $form).clone();
+                                    $('.datepicker', $form).remove();
+                                    $("[id$=due_date] .control-input", $form).append($cloned);
+                                    $('.datepicker', $form).datepicker({
+                                        autoclose:true,
+                            		    todayHighlight: true,
+                            		    showOnFocus: false
+                        		    });
+                                    $(".datepicker", $form).datepicker().on('show.bs.modal', function(event) {
+                                        // prevent datepicker from firing bootstrap modal "show.bs.modal"
+                                        event.stopPropagation();
+                                    });
+                                }
+                            });
+                            $('#add-task-modal select').selectize()
+                            /* fix formset */
+                            var $first_formset = $('#add-task-modal .formset:first');
+                            if (!$first_formset.find('#id_form-0-id').val()){
+                                $first_formset.find('.delete-row').click()
+                            }
+                            if ($('#add-task-modal #subtasks .alert-danger').length > 0 && $('#add-task-modal #task .alert-danger').length === 0) {
+                            	$('#task-form-tabs a:eq(1)').tab('show');
+                            }
+                            if ($('#add-task-modal #subtasks .alert-danger').length > 0) {
+                                $('#task-form-tabs a:eq(1)').addClass("error");
+                            }
+                            if ($('#add-task-modal #task .alert-danger').length > 0) {
+                                $('#task-form-tabs a:eq(0)').addClass("error");
+                            }
+                        }
+                    }
+                });
+            });
+
+            $(document).on("keydown", ".task-list-new-task", function(event) {
+                var keyCode = (event.keyCode ? event.keyCode : event.which);
+                if (keyCode == 13) {
+                    $('button', $(this)).trigger('click');
+                }
+            });
+
+            $("#add-task").click(function(e) {
+                $('#add-task-modal').modal('show', $(this));
+            });
+    	{% endif %} 
+
+        function refreshTasks() {
+            $.ajax({
+                type: "GET",
+                {% if episode_id %}
+                    url: "{% url 'inpatient_episode_tasks' sidebar_obj.id episode_id 'my_tasks' %}",
+                {% elif inpatient_sidebar_obj %}
+                    url: "{% url 'inpatient_episode_tasks' inpatient_sidebar_obj.patient.id inpatient_sidebar_obj.id 'my_tasks' %}",
+                {% else %}
+                    url: "{% url 'inpatient_episode_tasks' object.episode.patient.id object.episode.id 'my_tasks' %}",
+                {% endif %}
+                success: function (response) {
+                    $('#task-list').html(response);
+                }
+            });
+        }
+        // refreshTasks();
+    });
+</script>
+{% with modal_id='add-task-modal' modal_title='Editing a Task' modal_dismiss_button='Cancel' modal_confirm_button='Save' modal_desc="To edit this task, update its details or modify its sub-tasks, use the form below. You can also use this form to mark the task as complete." %}
+    {% include 'pilot_v2/fragments/generic/modal.html' %}
+{% endwith %}
