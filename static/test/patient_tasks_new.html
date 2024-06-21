@@ -1,7 +1,105 @@
+{% load project_tags %}
+
+{% with modal_id='edit-task-modal' modal_title='Editing a Task' modal_dismiss_button='Cancel' modal_confirm_button='Save changes' modal_desc='To edit this task, update its details or modify its sub-tasks, use the form below. You can also use this form to mark the task as complete.' %}
+    {% include 'pilot_v2/fragments/generic/modal.html' %}
+{% endwith %}
+
+{% if not hide_filters %}
+    <div class="filter-link-container{% if active_tab == 'open' %} active{% endif %}">
+        {% if episode %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'inpatient_episode_tasks' patient.id episode.id 'open' %}">Open tasks</a>
+        {% elif patient %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'patient_tasks' patient.id 'open' %}">Open tasks</a>
+        {% endif %}
+    </div>
+    <div class="filter-link-container{% if active_tab == 'completed' %} active{% endif %}">
+        {% if episode %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'inpatient_episode_tasks' patient.id episode.id 'completed' %}">Completed</a>
+        {% elif patient %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'patient_tasks' patient.id 'completed' %}">Completed</a>
+        {% endif %}
+    </div>
+    <div class="filter-link-container{% if active_tab == 'my_tasks' %} active{% endif %}">
+        {% if episode %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'inpatient_episode_tasks' patient.id episode.id 'my_tasks' %}">My tasks</a>
+        {% elif patient %}
+            <a class="task-filter-link filter-link" href="javascript:void(0)" data-href="{% url 'patient_tasks' patient.id 'my_tasks' %}">My tasks</a>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% with modal_id='edit-task-modal' %}
+    {% for task in object_list %}
+        {% if task.get_patient %}
+           <div {% if task.subtasks.all %} data-bs-toggle="tooltip" data-bs-placement="left"
+                title="The completion of this task depends on the subtasks"{% elif task.closing != task_manual %}
+                data-bs-toggle="tooltip" data-bs-placement="left" title="This task will be closed automatically"{% endif %}
+                class="checkbox-list-item checkbox{% if not task.due_date %} no-date{% else %} with-date{% endif %}" data-href="{% url 'edit_task' task.get_patient.id task.id %}{% if episode %}?episode={{ task.episode.id }}{% endif %}">
+
+                {% if show_patient_or_episode_button %}
+                    <a href="{% if task.episode %}{{ task.episode.get_absolute_url }}{% else %}{{ task.patient.get_absolute_url }}{% endif %}" class="btn btn-primary float-end">Go to {% if task.episode %}Episode{% else %}Patient{% endif %}</a>
+                {% endif %}
+                <input type="checkbox" data-id="{{ task.id }}"{% if task.done %} checked{% endif %}{% if task.closing != task_manual or task.subtasks.all %} disabled{% endif %}>
+                <label>
+                    {{ task.task_name }}
+                </label>
+                {% if not show_patient_or_episode_button %}
+                    <i class="fa fa-angle-right"></i>
+                {% endif %}
+                <div class="meta-information-container">
+                    {% comment %}
+                    <div class="meta-information">
+                        Status: {{ task.get_task_status_display }}
+                    </div>
+                    {% endcomment %}
+                    {% if task.created_by_factory or task.created_by_subfactory %}
+
+                    {% elif task.created_by %}
+                        <div class="meta-information">
+                            Created by: {{ task.created_by.profile }}
+                        </div>
+                    {% endif %}
+                    <div class="meta-information">
+                        Created on: {{ task.created|astz:timezone }}
+                    </div>
+                    {% if task.due_date %}
+                       <div class="meta-information{% if task.is_overdue %} error-message{% endif %}">
+                           Due: {{ task.due_date|date:'SHORT_DATE_FORMAT' }} {% if task.is_overdue %}<span>(OVERDUE)</span>{% endif %}
+                       </div>
+                    {% endif %}
+                </div>
+           </div>
+           {% for subtask in task.subtasks.all %}
+               <div {% if task.closing != task_manual %} data-bs-toggle="tooltip" data-bs-placement="left"
+                    title="This task will be closed automatically"{% endif %} class="checkbox-list-item child checkbox"
+                    data-href="{% url 'edit_task' task.get_patient.id task.id %}?subtask={{ subtask.id }}{% if episode %}&episode={{ task.episode.id }}{% endif %}"
+                    data-subtask-id="{{ subtask.id }}">
+                    <input type="checkbox" data-id="{{ subtask.id }}" {% if subtask.done %}checked{% endif %}{% if subtask.closing != task_manual %} disabled{% endif %}>
+                    <label>
+                        {{ subtask.task_name }}
+                   </label>
+                   <i class="fa fa-angle-right"></i>
+               </div>
+           {% endfor %}
+       {% endif %}
+    {% empty %}
+        <p class="empty-queryset">
+            {% if no_tasks_message %}
+                {{ no_tasks_message }}
+            {% else %}
+                {% if active_tab == 'my_tasks' %}
+                    You don't have any tasks associated with this {% if episode %}episode{%else %}patient{% endif %}.
+                {% else %}
+                    There are no {% if active_tab == 'open' %}open{% else %}completed{% endif %} tasks associated with this {% if episode %}episode{%else %}patient{% endif %}.
+                {% endif %}
+            {% endif %}
+        </p>
+    {% endfor %}
+{% endwith %}
 <script>
     $(document).ready(function() {
         // Initialize tooltips
-        $('[data-bs-target="tooltip"]').tooltip({
+        $('[data-bs-toggle="tooltip"]').tooltip({
             container: "body",
             animation: false,
             trigger: 'hover'
@@ -21,9 +119,11 @@
                 $('#edit-task-modal .modal-body').html('Loading...');
             });
 
-            // Handler for when the modal has been shown
+            // UPDATED: Handler for when the modal has been shown
             $('#edit-task-modal').on('shown.bs.modal', function(e) {
-                let url = $(e.relatedTarget).data('href'); // Get the URL to load content for the modal
+                let url = $(e.relatedTarget).data('href');
+                // NEW: Retrieve subtask ID
+                let subtaskId = $(e.relatedTarget).data('subtask-id');
                 let task_name = $('#task-input').val();
                 $('#task-input').val('');
                 let data = {task_name: task_name};
@@ -62,6 +162,17 @@
                         }
                         $('#edit-task-modal select').selectize();
 
+                        // NEW: Switch to subtasks tab and scroll if a subtask was clicked
+                        if (subtaskId) {
+                            $('#task-form-tabs a[href="#subtasks"]').tab('show');
+                            let $subtask = $('#edit-task-modal').find(`[data-id="${subtaskId}"]`);
+                            if ($subtask.length) {
+                                setTimeout(function() {
+                                    $('#edit-task-modal .modal-body').scrollTop($subtask.position().top);
+                                }, 100);
+                            }
+                        }
+
                         // Select the subtask tab if there are errors in the subtask form
                         if ($('#edit-task-modal #subtasks .alert-danger').length > 0 && $('#edit-task-modal #task .alert-danger').length === 0) {
                             $('#task-form-tabs a:eq(1)').tab('show');
@@ -73,14 +184,7 @@
                             $('#task-form-tabs a:eq(0)').addClass("error");
                         }
 
-                        // Scroll to the specific subtask if provided
-                        let subtaskId = $(e.relatedTarget).data('subtask-id');
-                        if (subtaskId) {
-                            let $subtask = $('#edit-task-modal').find(`[data-id="${subtaskId}"]`);
-                            if ($subtask.length) {
-                                $('#edit-task-modal .modal-body').scrollTop($subtask.position().top);
-                            }
-                        }
+                        // REMOVED: Old subtask scrolling code
                     }
                 });
             });
