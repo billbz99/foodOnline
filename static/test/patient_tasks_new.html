@@ -1,0 +1,161 @@
+<script>
+    $(document).ready(function() {
+        // Initialize tooltips
+        $('[data-bs-target="tooltip"]').tooltip({
+            container: "body",
+            animation: false,
+            trigger: 'hover'
+        });
+
+        // Event listener for opening the modal
+        $(document).on("click", "#task-list .checkbox-list-item > :not(.btn-primary)", function(e){
+            e.stopPropagation();
+            e.preventDefault();
+            // Show the modal and pass the parent element
+            $('#edit-task-modal').modal('show', $(this).parent());
+        });
+
+        {% if request.user|has_permission:'change_task' %}
+            // Handler for when the modal is about to be shown
+            $('#edit-task-modal').on('show.bs.modal', function() {
+                $('#edit-task-modal .modal-body').html('Loading...');
+            });
+
+            // Handler for when the modal has been shown
+            $('#edit-task-modal').on('shown.bs.modal', function(e) {
+                let url = $(e.relatedTarget).data('href'); // Get the URL to load content for the modal
+                let task_name = $('#task-input').val();
+                $('#task-input').val('');
+                let data = {task_name: task_name};
+
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    data: data,
+                    success: function (response) {
+                        // Populate the modal with the response content
+                        $('#edit-task-modal .modal-body').html(response);
+                        $('#edit-task-modal .formset').formset({
+                            added: function (form) {
+                                let $form = $(form);
+                                $('select', $form).selectize();
+                                let $cloned = $('.datepicker', $form).clone();
+                                $('.datepicker', $form).remove();
+                                $("[id$=due_date] .control-input", $form).append($cloned);
+                                $('.datepicker', $form).datepicker({
+                                    autoclose:true,
+                                    todayHighlight: true,
+                                    showOnFocus: false
+                                });
+                                $(".datepicker", $form).datepicker().on('show.bs.modal', function(event) {
+                                    // prevent datepicker from firing bootstrap modal "show.bs.modal"
+                                    event.stopPropagation();
+                                });
+                            },
+                            addText: "Create new subtask"
+                        });
+
+                        /* fix formset */
+                        let $first_formset = $('#edit-task-modal .formset:first');
+                        if (!$first_formset.find('#id_form-0-id').val()) {
+                            $first_formset.find('.delete-row').click()
+                        }
+                        $('#edit-task-modal select').selectize();
+
+                        // Select the subtask tab if there are errors in the subtask form
+                        if ($('#edit-task-modal #subtasks .alert-danger').length > 0 && $('#edit-task-modal #task .alert-danger').length === 0) {
+                            $('#task-form-tabs a:eq(1)').tab('show');
+                        }
+                        if ($('#edit-task-modal #subtasks .alert-danger').length > 0) {
+                            $('#task-form-tabs a:eq(1)').addClass("error");
+                        }
+                        if ($('#edit-task-modal #task .alert-danger').length > 0) {
+                            $('#task-form-tabs a:eq(0)').addClass("error");
+                        }
+
+                        // Scroll to the specific subtask if provided
+                        let subtaskId = $(e.relatedTarget).data('subtask-id');
+                        if (subtaskId) {
+                            let $subtask = $('#edit-task-modal').find(`[data-id="${subtaskId}"]`);
+                            if ($subtask.length) {
+                                $('#edit-task-modal .modal-body').scrollTop($subtask.position().top);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Event listener for task filter links
+            let taskTabs = $("#task-list .task-filter-link");
+            for (let i = 0; i < taskTabs.length; i++) {
+                taskTabs[i].addEventListener('click',function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    let task_url = taskTabs[i].dataset.href;
+                    $.ajax({
+                        type: "GET",
+                        url: task_url,
+                        success: function (response) {
+                            $('#task-list').html(response);
+                        }
+                    });
+                });
+            }
+
+            // Event listener for the confirm button in the modal
+            $('#edit-task-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                let $form = $('#edit-task-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#edit-task-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok') {
+                            $('#edit-task-modal').modal('hide');
+                            $('body').removeClass('modal-open');
+                            $('.modal-backdrop').remove();
+                            refreshTasks();
+                        } else {
+                            $('#edit-task-modal .modal-body').html(response);
+                            $('#edit-task-modal .formset').formset({
+                                added: function (form) {
+                                    let $form = $(form);
+                                    $('select', $form).selectize();
+                                    let $cloned = $('.datepicker', $form).clone();
+                                    $('.datepicker', $form).remove();
+                                    $("[id$=due_date] .control-input", $form).append($cloned);
+                                    $('.datepicker', $form).datepicker({
+                                        autoclose:true,
+                                        todayHighlight: true,
+                                        showOnFocus: false
+                                    });
+                                    $(".datepicker", $form).datepicker().on('show.bs.modal', function(event) {
+                                        // prevent datepicker from firing bootstrap modal "show.bs.modal"
+                                        event.stopPropagation();
+                                    });
+                                }
+                            });
+                            $('#edit-task-modal select').selectize();
+                            /* fix formset */
+                            let $first_formset = $('#edit-task-modal .formset:first');
+                            if (!$first_formset.find('#id_form-0-id').val()){
+                                $first_formset.find('.delete-row').click()
+                            }
+                            if ($('#edit-task-modal #subtasks .alert-danger').length > 0 && $('#edit-task-modal #task .alert-danger').length === 0) {
+                                $('#task-form-tabs a:eq(1)').tab('show');
+                            }
+                            if ($('#edit-task-modal #subtasks .alert-danger').length > 0) {
+                                $('#task-form-tabs a:eq(1)').addClass("error");
+                            }
+                            if ($('#edit-task-modal #task .alert-danger').length > 0) {
+                                $('#task-form-tabs a:eq(0)').addClass("error");
+                            }
+                        }
+                    }
+                });
+            });
+        {% endif %}
+    });
+</script>
