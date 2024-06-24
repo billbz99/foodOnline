@@ -1,0 +1,1432 @@
+{% extends base_template %}
+{% load common_tags endless project_tags staticfiles %}
+
+{% block main_content %}
+
+    <div class="row m-t-xl">
+        <div class="col-xs-12 col-sm-9">
+            {% if dont_display_alerts %}
+                <div class="row">
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_appointments' object.patient_id object.id %}">
+                            {{ object.get_appointments_number|default:"0" }}
+                        </a>
+                        Appointments
+                    </div>
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_medication_list' object.patient_id object.id %}">
+                            {{ object.get_medication_number|default:"0" }}
+                        </a>
+                        Medications
+                    </div>
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_phone_calls_list' object.patient_id object.id %}">
+                            {{ object.get_phone_calls_number|default:"0" }}
+                        </a>
+                        Communications
+                    </div>
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_sdh_intervention_list' object.patient_id object.id %}">
+                            {{ object.get_sdhintervention_records_number|default:"0" }}
+                        </a>
+                        Interventions
+                    </div>
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_referral_list' object.patient_id object.id %}">
+                            {{ object.get_referrals_number|default:"0" }}
+                        </a>
+                        Referrals
+                    </div>
+                    <div class="col-xs-12 col-md-2 metric-item col-print-3">
+                        <a href="{% url 'inpatient_episode_inpatient_visits_list' object.patient_id object.id %}">
+                            {{ object.get_inpatient_visits_number|default:"0" }}
+                        </a>
+                        Inpatient Visits
+                    </div>
+                </div>
+            {% else %}
+                {%  if alert_list %}
+                    {% for row in alert_list %}
+                        <div class="row">
+                            {% for column in row %}
+                                <div class="col-xs-12 col-sm-4">
+                                    <i class="fa fa-exclamation-triangle fa-fw" style="color:red"></i>{{ column|safe }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    No alerts for this episode!
+                {% endif %}
+            {% endif %}
+            <hr>
+            <div class="row">
+                <div id="medical-conditions"></div>
+                <div class="col-xs-12 col-md-4 top-info">
+                    <label>Social Determinants of Health: </label>
+                    {% for sdh in social_determinants_of_health %}
+                        {% if not sdh.ihd_interventions %}<i>{% endif %}{{ sdh.social_determinants_of_health_type.sdh_name }}{% if not sdh.ihd_interventions %}</i>{% endif %}{% if forloop.last %}{% else %},&nbsp{% endif %}
+                    {% endfor %}
+                        <br>
+            	        <a href="{% url 'patient_sdhs' object.patient_id %}">
+            	            view
+            	        </a>
+                </div>
+                <div class="col-xs-12 col-md-4 top-info">
+                    <label>Patient Navigator: </label> {{ object.cc_staff|default:"N/A" }}<br/>
+                    <label>Navigation Specialist: </label> {{ object.staff|default:"N/A" }}<br/>
+                    <label>PIC: </label> {{ object.bsa_staff|default:"N/A" }}<br/>
+                    <label>Quality Coach: </label> {{ object.qc_staff|default:"N/A" }}<br/>
+                    <label>Program Manager: </label> {{ object.pm_staff|default:"N/A" }}<br/>
+
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-3">
+            <div class="row">
+                <div class="col-xs-12 text-right">
+                    <div class="btn-group quick-actions-container dropdown">
+                        <button type="button" id="quick-actions" class="btn btn-primary btn-round dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Quick Actions
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end " aria-labelledby="quick-actions">
+                            {% if user|has_permission:'add_comment' %}
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" id="new-note" data-bs-toggle="modal" data-bs-target="#add-note-modal">
+                                        <i class="fa fa-sticky-note fa-fw"></i>
+                                        New Note
+                                    </a>
+                                </li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'patient_inpatient_episode_facesheet_pdf' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                    <i class="fa fa-file-pdf-o fa-fw"></i>
+                                    Facesheet PDF
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'patient_inpatient_episode_report_pdf' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                    <i class="fa fa-file-pdf-o fa-fw"></i>
+                                    Case Closing Summary PDF
+                                </a>
+                            </li>
+                            {% if inpatient_sidebar_obj.nh_episodeofcare_id %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'patient_inpatient_episode_send_report_pdf' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                    <i class="fa fa-paper-plane-o fa-fw"></i>
+                                    Send Case Closing Summary PDF
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if user|has_permission:'change_inpatientepisode' %}
+                                {% if object.object_type == 0 %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'patient_inpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                            <i id="inpatient-sidebar-edit-button" class="fa fa-pencil fa-fw"></i>
+                                            Edit Episode
+                                        </a>
+                                    </li>
+                                {% elif object.object_type == 1 %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'patient_outpatient_procedure_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                            <i id="inpatient-sidebar-edit-button" class="fa fa-pencil fa-fw"></i>
+                                            Edit Episode
+                                        </a>
+                                    </li>
+                                {% elif object.object_type == 3 %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'patient_outpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                            <i id="inpatient-sidebar-edit-button" class="fa fa-pencil fa-fw"></i>
+                                            Edit Episode
+                                        </a>
+                                    </li>
+                                {% elif object.object_type == 4 %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'patient_inpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                            <i id="inpatient-sidebar-edit-button" class="fa fa-pencil fa-fw"></i>
+                                            Edit Episode
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'patient_case_management_referral_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                            <i id="inpatient-sidebar-edit-button" class="fa fa-pencil fa-fw"></i>
+                                            Edit Episode
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+
+                            {% if user|has_permission:'close_case' %}
+
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" id="close-case" data-bs-toggle="modal" data-bs-target="#close-case-modal">
+                                        <i class="fa fa-times fa-fw"></i>
+                                        Closing
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'patient_inpatient_episode_closing' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                                        <i class="fa fa-times fa-fw"></i>
+                                        Closing Wizard
+                                    </a>
+                                </li>
+                                {% if object.closed_date %}
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" id="reopen-case" data-bs-toggle="modal" data-bs-target="#reopen-case-modal">
+                                        <i class="fa fa-refresh fa-fw"></i>
+                                        Re-open case
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item" href="javascript:void(0)" id="discharge" data-bs-toggle="modal" data-bs-target="#discharge-modal">
+                                        <i class="fa fa-times fa-fw"></i>
+                                        Discharge
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="row">
+        <div class="col-xs-7 col-print-12">
+            {% if inpatient_sidebar_obj.object_type == 0 %}
+                <h2>
+                    Episode Detail
+
+                    {% if user|has_permission:'change_inpatientepisode' %}
+                        <a class="green action" href="{% url 'patient_inpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-pencil fa-fw"></i>
+                            Edit Episode
+                        </a>
+                    {% endif %}
+                </h2>
+                <p class="m-b-none">
+                    Admitted: {{ inpatient_sidebar_obj.admit_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Notification: {{ inpatient_sidebar_obj.notification_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% if inpatient_sidebar_obj.discharge_date %}
+                        <br>
+                        Discharged: {{ inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>
+                        Discharge Notification: {{ inpatient_sidebar_obj.discharge_date_updated }}
+                    {% endif %}
+                    <br>
+                    Episode Status: {{ inpatient_sidebar_obj.get_episode_status_display }}
+                    {% if inpatient_sidebar_obj.due_to_close_date %}
+                        <br>
+                        Due to Close Date: {{ inpatient_sidebar_obj.due_to_close_date }}
+                    {% endif %}
+                    <br>
+                    Closed: {{ inpatient_sidebar_obj.is_closed|yesno:"Yes,No" }}{% if inpatient_sidebar_obj.is_closed %} {{inpatient_sidebar_obj.closed_date}} ({{ inpatient_sidebar_obj.closing_reason }}){% endif %}
+                    {% if inpatient_sidebar_obj.lifecyclehtml != '' %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {{ inpatient_sidebar_obj.lifecyclehtml }}
+                    {% endif %}
+                    <span class="text-muted-more">|</span>&nbsp;Aging: {{ inpatient_sidebar_obj.get_aging_display }}
+                </p>
+                <p>
+                    {% if inpatient_sidebar_obj.client_program %}
+                        Client Program: <span class="nh-orange">{{ inpatient_sidebar_obj.client_program }}</span>
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% endif %}
+                    <br>
+                    {% if inpatient_sidebar_obj.referral_program_check_status == 2 %}
+                    Referral Program Check: <span class="red">Failed</span>
+                    <br>
+                    {%  endif %}
+
+
+                    {% if inpatient_sidebar_obj.object_type != 3 %}
+
+                        Facility: {{ inpatient_sidebar_obj.group|default:'N/A' }}
+                    {%  endif %}
+                    {% if inpatient_sidebar_obj.group.facility_type %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        Facility Type: {{ inpatient_sidebar_obj.group.facility_type.title }}
+                    {% endif %}
+
+                    <br>Facility Address: {{ inpatient_sidebar_obj.group_demographic.address1|default:'N/A' }} {{ inpatient_sidebar_obj.group_demographic.address2|default:'' }} {{ inpatient_sidebar_obj.group_demographic.address3|default:''}} &nbsp{{ inpatient_sidebar_obj.group_demographic.city|default:'N/A' }}, {{ inpatient_sidebar_obj.group_demographic.state|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group_demographic.zip|default:'N/A' }}
+                    <span class="text-muted-more">|</span>
+                    Phone: {{ inpatient_sidebar_obj.group_demographic.primary_phone|default:'N/A' }}
+                    <span class="text-muted-more">|</span>
+                    Fax: {{ inpatient_sidebar_obj.group_demographic.fax|default:'N/A' }}
+                    {% if inpatient_sidebar_obj.patient.is_show_risk_score %}
+
+                        <br>Risk Score at Admission:
+                            {% if inpatient_sidebar_obj.risk_score_at_admission %}
+                                {% if inpatient_sidebar_obj.risk_score_at_admission|to_float >= 0.38 and inpatient_sidebar_obj.risk_score_at_admission|to_float <= 0.6%}
+                                    <span class="green">
+                                {% else %}
+                                    <span class="red">
+                                {% endif %}
+                                {{inpatient_sidebar_obj.risk_score_at_admission }}</span>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        <br>Risk Score at Discharge:
+                            {% if inpatient_sidebar_obj.risk_score_at_discharge %}
+                                {% if inpatient_sidebar_obj.risk_score_at_discharge|to_float >= 0.38 and inpatient_sidebar_obj.risk_score_at_discharge|to_float <= 0.6%}
+                                    <span class="green">
+                                {% else %}
+                                    <span class="red">
+                                {% endif %}
+                                {{inpatient_sidebar_obj.risk_score_at_discharge }}</span>
+                            {% else %}
+                                N/A
+                            {% endif %}<br>
+                    {% endif %}
+                </p>
+
+                {% if inpatient_sidebar_obj.group or inpatient_sidebar_obj.anticipated_discharge_date %}
+                    <p>
+                        {% if inpatient_sidebar_obj.anticipated_discharge_date %}
+                            Anticipated Discharge Date: {{ inpatient_sidebar_obj.anticipated_discharge_date }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <hr>
+                <p>
+                    <ul class="list-unstyled">
+                        <li>Discharge Disposition:&nbsp;
+                        {% if inpatient_sidebar_obj.get_discharge_order %}
+                            {{ inpatient_sidebar_obj.get_discharge_order.get_discharge_disposition_display }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                        </li>
+                        <li>Admitting Diagnosis:&nbsp;
+                        {% if inpatient_sidebar_obj.admitting_diagnosis_1 %}
+                            {{ inpatient_sidebar_obj.admitting_diagnosis_1.short_description }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                        </li>
+                        <li>Discharge Diagnosis:&nbsp;
+                        {% if inpatient_sidebar_obj.discharge_diagnosis_1 %}
+                            {{ inpatient_sidebar_obj.discharge_diagnosis_1.short_description }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                        </li>
+                        {% if inpatient_sidebar_obj.patient.is_uhg_member %}
+                            <li>Case ID:&nbsp;
+                            {% if inpatient_sidebar_obj.external_id %}
+                                {{ inpatient_sidebar_obj.external_id }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                            </li>
+                            <li>Health Plan:&nbsp;
+                            {% if inpatient_sidebar_obj.health_plan %}
+                                {{ inpatient_sidebar_obj.health_plan }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                            </li>
+                        {% endif %}
+                    </ul>
+                </p>
+                <hr>
+                <p>
+                    <ul class="list-unstyled">
+                        <li class="sidebar-item">Last call:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalldate }} {% else %}N/A{% endif %}</li>
+                        <li class="sidebar-item">Reason:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thecallreason }} {% else %}N/A{% endif %}</li>
+                        {% if sidebar_obj.get_unabletocontactpatient %}
+                            <li class="sidebar-item">Outcome:&nbsp; <strong style="color: red;">{% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalltype }} {% else %}N/A{% endif %} </strong></li>
+                        {% else %}
+                            <li class="sidebar-item">Outcome:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalltype }} {% else %}N/A{% endif %} </li>
+                        {% endif %}
+                    </ul>
+                </p>
+                {% if inpatient_sidebar_obj.case_management %}
+                    <hr>
+{#                    <div class="col-md-6" style="padding-left: 0px;"> #}
+                        <ul class="list-unstyled">
+                            <li>Case Management:&nbsp
+                            {% if inpatient_sidebar_obj.case_management %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}
+                            </li>
+                            <li>
+                            Case Management Type:&nbsp; {{ inpatient_sidebar_obj.case_management_type }}
+                            </li>
+                        </ul>
+{#                    </div> #}
+                {% endif %}
+                {% if inpatient_sidebar_obj.authorization_number %}
+                    <hr>
+{#                    <div class="col-md-6" style="padding-left: 0px;"> #}
+                       <ul class="list-unstyled">
+                            <li>Authorization Number:&nbsp;
+                            {% if inpatient_sidebar_obj.authorization_number %}
+                                {{ inpatient_sidebar_obj.authorization_number }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                            </li>
+                            <li>
+                            Authorization Status:&nbsp; {{ inpatient_sidebar_obj.get_authorization_status_display }}
+                            </li>
+                        </ul>
+{#                    </div> #}
+                {% endif %}
+                <hr>
+                <h2>
+                    Transfers &amp; Readmissions
+                    {% if user|has_permission:'add_inpatientepisode' and inpatient_sidebar_obj.can_add_readmission and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="{% url 'patient_inpatient_episode_create' sidebar_obj.id %}?related_to_episode={{ inpatient_sidebar_obj.id }}">
+                            <i class="fa fa-plus"></i> Readmission
+                        </a>
+                    {% endif %}
+                    {% if user|has_permission:'change_inpatientepisode' and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="javascript:void(0)" data-href="{% url 'transfer_patient' inpatient_sidebar_obj.id %}" data-bs-toggle="modal" data-bs-target="#transfer-episode-modal">
+                            <i class="fa fa-plus"></i> Transfer
+                        </a>
+                    {% endif %}
+                </h2>
+            {% elif inpatient_sidebar_obj.object_type == 3 %}
+                <h2>
+                    Episode Detail
+
+                    {% if user|has_permission:'change_inpatientepisode' %}
+                        <a class="green action" href="{% url 'patient_outpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-pencil fa-fw"></i>
+                            Edit Episode
+                        </a>
+                    {% endif %}
+                </h2>
+                <p class="m-b-none">
+                    Engagement: {{ inpatient_sidebar_obj.program_acceptance_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% if episode.discharge_date %}
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        Discharged: {{ inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% endif %}
+                    &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Closed: {{ inpatient_sidebar_obj.is_closed|yesno:"Yes,No" }}{% if inpatient_sidebar_obj.is_closed %} {{inpatient_sidebar_obj.closed_date}} ({{ inpatient_sidebar_obj.closing_reason }}){% endif %}
+                    {% if inpatient_sidebar_obj.lifecyclehtml != '' %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {{ inpatient_sidebar_obj.lifecyclehtml }}
+                    {% endif %}
+                    <span class="text-muted-more">|</span>&nbsp;Aging: {{ inpatient_sidebar_obj.get_aging_display }}
+                </p>
+                <p>
+                    {% if inpatient_sidebar_obj.client_program %}
+                        Client Program: <span class="nh-orange">{{ inpatient_sidebar_obj.client_program }}</span>
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% endif %}
+                    {% if inpatient_sidebar_obj.object_type != 3 %}
+                        Facility: {{ inpatient_sidebar_obj.group|default:'N/A' }}
+                    {%  endif %}
+                  </p>
+                {% if inpatient_sidebar_obj.group or inpatient_sidebar_obj.anticipated_discharge_date %}
+                    <p>
+                        {% if inpatient_sidebar_obj.group.facility_type %}
+                            Facility Type: {{ inpatient_sidebar_obj.group.facility_type.title }}
+                            &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {% endif %}
+                        {% if inpatient_sidebar_obj.anticipated_discharge_date %}
+                            Anticipated Discharge Date: {{ inpatient_sidebar_obj.anticipated_discharge_date }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <br>Facility Address: {{ inpatient_sidebar_obj.group.group_address|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_city|default:'N/A' }}, {{ inpatient_sidebar_obj.group.group_state|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_zip|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Phone: {{ inpatient_sidebar_obj.group.phone|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Fax: {{ inpatient_sidebar_obj.group.fax|default:'N/A' }}
+                {% if inpatient_sidebar_obj.case_management %}
+                    <hr>
+{#                    <div class="col-md-6" style="padding-left: 0px;"> #}
+                        <ul class="list-unstyled">
+                            <li>Case Management:&nbsp
+                            {% if inpatient_sidebar_obj.case_management %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}
+                            </li>
+                            <li>
+                            Case Management Type:&nbsp; {{ inpatient_sidebar_obj.case_management_type }}
+                            </li>
+                        </ul>
+{#                    </div> #}
+                {% endif %}
+                {% if inpatient_sidebar_obj.authorization_number %}
+                    <hr>
+{#                    <div class="col-md-6" style="padding-left: 0px;"> #}
+                       <ul class="list-unstyled">
+                            <li>Authorization Number:&nbsp;
+                            {% if inpatient_sidebar_obj.authorization_number %}
+                                {{ inpatient_sidebar_obj.authorization_number }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                            </li>
+                            <li>
+                            Authorization Status:&nbsp; {{ inpatient_sidebar_obj.get_authorization_status_display }}
+                            </li>
+                        </ul>
+{#                    </div> #}
+                {% endif %}
+                <hr>
+                <h2>
+                    Hospitalization(s)
+                    {% if user|has_permission:'change_inpatientepisode' and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="{% url 'inpatient_episode_hospitalization_create' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-plus"></i> Hospitalization
+                        </a>
+                    {% endif %}
+                </h2>
+            {% elif inpatient_sidebar_obj.object_type == 4 %}
+                <h2>
+                    Hospitalization for {{ inpatient_sidebar_obj.related_to_outpatient_episode }}
+                </h2>
+                <h2>
+                    Episode Detail
+
+                    {% if user|has_permission:'change_inpatientepisode' %}
+                        <a class="green action" href="{% url 'patient_inpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-pencil fa-fw"></i>
+                            Edit Episode
+                        </a>
+                    {% endif %}
+                </h2>
+                <p class="m-b-none">
+                    Admitted: {{ inpatient_sidebar_obj.admit_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Notification: {{ inpatient_sidebar_obj.notification_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% if inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' %}
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        Discharged: {{ inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% endif %}
+                    &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Closed: {{ inpatient_sidebar_obj.is_closed|yesno:"Yes,No" }}{% if inpatient_sidebar_obj.is_closed %} {{inpatient_sidebar_obj.closed_date}} ({{ inpatient_sidebar_obj.closing_reason }}){% endif %}
+                    {% if inpatient_sidebar_obj.lifecyclehtml != '' %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {{ inpatient_sidebar_obj.lifecyclehtml }}
+                    {% endif %}
+                    <span class="text-muted-more">|</span>&nbsp;Aging: {{ inpatient_sidebar_obj.get_aging_display }}
+                </p>
+                <p>
+                    {% if inpatient_sidebar_obj.client_program %}
+                        Client Program: <span class="nh-orange">{{ inpatient_sidebar_obj.client_program }}</span>
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% endif %}
+                    {% if inpatient_sidebar_obj.object_type != 3 %}
+                        Facility: {{ inpatient_sidebar_obj.group|default:'N/A' }}
+                    {%  endif %}
+                </p>
+                {% if inpatient_sidebar_obj.group or inpatient_sidebar_obj.anticipated_discharge_date %}
+                    <p>
+                        {% if inpatient_sidebar_obj.group.facility_type %}
+                            Facility Type: {{ inpatient_sidebar_obj.group.facility_type.title }}
+                            &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {% endif %}
+                        {% if inpatient_sidebar_obj.anticipated_discharge_date %}
+                            Anticipated Discharge Date: {{ inpatient_sidebar_obj.anticipated_discharge_date }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <br>Facility Address: {{ inpatient_sidebar_obj.group.group_address|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_city|default:'N/A' }}, {{ inpatient_sidebar_obj.group.group_state|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_zip|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Phone: {{ inpatient_sidebar_obj.group.phone|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Fax: {{ inpatient_sidebar_obj.group.fax|default:'N/A' }}
+                <hr>
+                <h2>
+                    Transfers &amp; Readmissions
+                    {% if user|has_permission:'add_inpatientepisode' and inpatient_sidebar_obj.can_add_readmission and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="{% url 'patient_inpatient_episode_create' sidebar_obj.id %}?related_to_episode={{ inpatient_sidebar_obj.id }}">
+                            <i class="fa fa-plus"></i> Readmission
+                        </a>
+                    {% endif %}
+                    {% if user|has_permission:'change_inpatientepisode' and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="javascript:void(0)" data-href="{% url 'transfer_patient' inpatient_sidebar_obj.id %}" data-bs-toggle="modal" data-bs-target="#transfer-episode-modal">
+                            <i class="fa fa-plus"></i> Transfer
+                        </a>
+                    {% endif %}
+                </h2>
+            {% elif inpatient_sidebar_obj.object_type == 1 %}
+                <h2>
+                    Episode Detail
+
+                    {% if user|has_permission:'change_inpatientepisode' %}
+                        <a class="green action" href="{% url 'patient_outpatient_procedure_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-pencil fa-fw"></i>
+                            Edit Episode
+                        </a>
+                    {% endif %}
+                </h2>
+                <p class="m-b-none">
+                    Admitted: {{ inpatient_sidebar_obj.procedure_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Notification: {{ inpatient_sidebar_obj.notification_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% if inpatient_sidebar_obj.discharge_date %}
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        Discharged: {{ inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% endif %}
+                    &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Closed: {{ inpatient_sidebar_obj.is_closed|yesno:"Yes,No" }}{% if inpatient_sidebar_obj.is_closed %} {{inpatient_sidebar_obj.closed_date}} ({{ inpatient_sidebar_obj.closing_reason }}){% endif %}
+                    {% if inpatient_sidebar_obj.lifecyclehtml != '' %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {{ inpatient_sidebar_obj.lifecyclehtml }}
+                    {% endif %}
+                    <span class="text-muted-more">|</span>&nbsp;Aging: {{ inpatient_sidebar_obj.get_aging_display }}
+                </p>
+                <p>
+                    {% if inpatient_sidebar_obj.client_program %}
+                        Client Program: <span class="nh-orange">{{ inpatient_sidebar_obj.client_program }}</span>
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% endif %}
+                    {% if inpatient_sidebar_obj.object_type != 3 %}
+                        Facility: {{ inpatient_sidebar_obj.group|default:'N/A' }}
+                    {%  endif %}
+                </p>
+                {% if inpatient_sidebar_obj.group or inpatient_sidebar_obj.anticipated_discharge_date %}
+                    <p>
+                        {% if inpatient_sidebar_obj.group.facility_type %}
+                            Facility Type: {{ inpatient_sidebar_obj.group.facility_type.title }}
+                            &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {% endif %}
+                        {% if inpatient_sidebar_obj.anticipated_discharge_date %}
+                            Anticipated Discharge Date: {{ inpatient_sidebar_obj.anticipated_discharge_date }}
+                        {% endif %}
+                    </p>
+                {% endif %}
+                <br>Facility Address: {{ inpatient_sidebar_obj.group.group_address|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_city|default:'N/A' }}, {{ inpatient_sidebar_obj.group.group_state|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_zip|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Phone: {{ inpatient_sidebar_obj.group.phone|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Fax: {{ inpatient_sidebar_obj.group.fax|default:'N/A' }}
+                <p>
+                    Facility In Network: {{ inpatient_sidebar_obj.facility_in_network }}
+                    &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Provider In Network: {{ inpatient_sidebar_obj.provider_in_network }}
+                </p>
+                {% if inpatient_sidebar_obj.episode_type %}
+                    <p>
+                        Episode Type: {{ inpatient_sidebar_obj.episode_type }}
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    </p>
+                {% endif %}
+                {% if inpatient_sidebar_obj.procedure_1 %}
+                    <p>
+                        Procedure: {{ inpatient_sidebar_obj.procedure_1|default:'N/A' }}
+                        <br/>
+                        Procedure Completed: {{ inpatient_sidebar_obj.procedure_completed }}
+                    </p>
+                {% endif %}
+                <hr>
+                <p>
+                    <ul class="list-unstyled">
+                        <li class="sidebar-item">Last call:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalldate }} {% else %}N/A{% endif %}</li>
+                        <li class="sidebar-item">Reason:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thecallreason }} {% else %}N/A{% endif %}</li>
+                        {% if sidebar_obj.get_unabletocontactpatient %}
+                            <li class="sidebar-item">Outcome:&nbsp; <strong style="color: red;">{% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalltype }} {% else %}N/A{% endif %} </strong></li>
+                        {% else %}
+                            <li class="sidebar-item">Outcome:&nbsp; {% if sidebar_obj.get_thelastcalldate %}{{ sidebar_obj.get_thelastcalltype }} {% else %}N/A{% endif %} </li>
+                        {% endif %}
+                    </ul>
+                </p>
+                <hr>
+                <h2>
+                    Transfers
+                    {% if user|has_permission:'change_inpatientepisode' and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="javascript:void(0)" data-href="{% url 'transfer_patient' inpatient_sidebar_obj.id %}" data-bs-toggle="modal" data-bs-target="#transfer-episode-modal">
+                            <i class="fa fa-plus"></i> Transfer
+                        </a>
+                    {% endif %}
+                </h2>
+            {% else %}
+                <h2>
+                    Episode Detail
+
+                    {% if user|has_permission:'change_inpatientepisode' %}
+                        <a class="green action" href="{% url 'patient_inpatient_episode_update' sidebar_obj.id inpatient_sidebar_obj.id %}">
+                            <i class="fa fa-pencil fa-fw"></i>
+                            Edit Episode
+                        </a>
+                    {% endif %}
+                </h2>
+                <p class="m-b-none">
+                    Admitted: {{ inpatient_sidebar_obj.procedure_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }} &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Notification: {{ inpatient_sidebar_obj.notification_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% if inpatient_sidebar_obj.discharge_date %}
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        Discharged: {{ inpatient_sidebar_obj.discharge_date|date:'SHORT_DATE_FORMAT'|default:'N/A' }}
+                    {% endif %}
+                    &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    Closed: {{ inpatient_sidebar_obj.is_closed|yesno:"Yes,No" }}{% if inpatient_sidebar_obj.is_closed %} {{inpatient_sidebar_obj.closed_date}} ({{ inpatient_sidebar_obj.closing_reason }}){% endif %}
+                    {% if inpatient_sidebar_obj.lifecyclehtml != '' %}
+                        <span class="text-muted-more">|</span>&nbsp;&nbsp;
+                        {{ inpatient_sidebar_obj.lifecyclehtml }}
+                    {% endif %}
+                    <span class="text-muted-more">|</span>&nbsp;Aging: {{ inpatient_sidebar_obj.get_aging_display }}
+                </p>
+                <p>
+                    {% if inpatient_sidebar_obj.client_program %}
+                        Client Program: <span class="nh-orange">{{ inpatient_sidebar_obj.client_program }}</span>
+                        &nbsp;&nbsp;<span class="text-muted-more">|</span>&nbsp;&nbsp;
+                    {% endif %}
+                    {% if inpatient_sidebar_obj.object_type != 3 %}
+                        Facility: {{ inpatient_sidebar_obj.group|default:'N/A' }}
+                    {%  endif %}
+                </p>
+                <br>Facility Address: {{ inpatient_sidebar_obj.group.group_address|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_city|default:'N/A' }}, {{ inpatient_sidebar_obj.group.group_state|default:'N/A' }}&nbsp{{ inpatient_sidebar_obj.group.group_zip|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Phone: {{ inpatient_sidebar_obj.group.phone|default:'N/A' }}
+                <span class="text-muted-more">|</span>
+                Fax: {{ inpatient_sidebar_obj.group.fax|default:'N/A' }}
+                <h2>
+                    Transfers
+                    {% if user|has_permission:'change_inpatientepisode' and not inpatient_sidebar_obj.related_to_episode %}
+                        <a class="green action" href="javascript:void(0)" data-href="{% url 'transfer_patient' inpatient_sidebar_obj.id %}" data-bs-toggle="modal" data-bs-target="#transfer-episode-modal">
+                            <i class="fa fa-plus"></i> Transfer
+                        </a>
+                    {% endif %}
+                </h2>
+            {% endif %}
+            <div id='transfers-list' class="detailed-list">
+            </div>
+        </div>
+
+        <div class="col-xs-5 hidden-print">
+            <h2>Episode tasks</h2>
+            <div id="task-list" class="filtered-checkbox-list"></div>
+
+            {% if user|has_permission:'add_task' %}
+            <div class="input-group add-new-group-input task-list-new-task">
+                <input id="task-input" type="text" class="form-control" placeholder="Create New task">
+                <span class="input-group-btn">
+                    <button id="add-task" data-href="{% url 'inpatient_episode_create_task' sidebar_obj.id inpatient_sidebar_obj.id %}" data-bs-toggle="modal" data-bs-target="#edit-task-modal" class="btn btn-default" type="button">ENTER</button>
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <hr class="m-t-xl m-b-md" />
+
+    <div class="row">
+        <div id="text-chat-box"></div>
+        <div class="col-xs-12 col-md-4 col-print-4">
+            <div  class="notes-box-container">
+                <h4>
+                    Recent discharge orders
+                </h4>
+                <div class="notes-box-content p-md">
+                    <div id="discharge-orders"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-12 col-md-4 col-print-4">
+            <div id="episode-notes" class="row"></div>
+        </div>
+        <div class="col-xs-12 col-md-4 col-print-4" id="episode-documents">
+            <div id="documents-box" class="notes-box-container">
+                <h4>
+                    Recent documents <a href="{% url 'patient_documents' sidebar_obj.id %}">View all</a>
+                </h4>
+                <div class="notes-box-content p-md">
+                    <div id="documents-list-container"></div>
+                    {% if user|has_permission:'add_patientdocument' %}
+                    <div id="documents-dropzone" class="file-dropzone dropzone">
+                        <div class="dz-message">
+                            <i class="fa fa-folder-o"></i> Drop or click to upload files
+                        </div>
+                        <i class="fa fa-spinner fa-spin"></i>
+                    </div>
+                    {% endif %}
+                    {% comment %}
+                    {% if user|has_permission:'add_patientdocument' %}
+                    {% endif %}
+                    {% endcomment %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Readmore.js/2.2.1/readmore.min.js" integrity="sha512-HzK/KDSaVfdeH8AynloB8uceDESseASuyy/tOU/2fM3lDJlQN289yZ6UsB9p7EFRpGnDRg49p3UKGfE7ulr2Vg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        var task_url = "{% url 'inpatient_episode_tasks' sidebar_obj.id inpatient_sidebar_obj.id 'my_tasks' %}";
+
+        function refreshTasks() {
+            $.ajax({
+                type: "GET",
+                url: task_url,
+                success: function (response) {
+                    $('#task-list').html(response);
+                }
+            });
+        }
+
+        function startTextChatBox() {
+            $.ajax({
+                type: "GET",
+                url: "{% url 'text_chat_box' sidebar_obj.id %}",
+                success: function (response) {
+                    $('#text-chat-box').html(response);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+
+            {% if related_to_episode_to_close_obj %}
+
+            $('#related-to-episode-closing-reason-modal .modal-dialog').css("width", 760 + "px");
+            // If the related to episode is not closed, then pop this up
+
+
+            $('#related-to-episode-closing-reason-modal').on('shown.bs.modal', function(e) {
+                //$('#related-to-episode-closing-reason-modal .modal-body').html('Loading...');
+                // let $closingReasons = getSelectize('closing-reasons');
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_closing_reason' sidebar_obj.id related_to_episode_to_close_obj.id %}",
+                    data: {},
+                    success: function(response) {
+                      // $closingReasons.clear();
+                      // $closingReasons.clearOptions();
+                      // $closingReasons.load(function(callback) {
+                      //       callback(results.closing_reasons);
+                      // });
+                      // $closingReasons.addItem(results.closing_reasons[0].value,true);
+                        //
+                        //console.log(response);
+                      $('#related-to-episode-closing-reason-modal .modal-body').html(response);
+                    },
+                });
+            });
+
+            $('#related-to-episode-closing-reason-modal .modal-confirm-button').click(function(e) {
+                var $form = $('#related-to-episode-closing-reason-modal form');
+
+                $('#related-to-episode-closing-reason-modal .modal-body').html('Loading...');
+                $.ajax({
+                    url: $form.attr('action'),
+                    data: $form.serialize(),
+                    type: "POST",
+                    success: function(response) {
+                        $('#related-to-episode-closing-reason-modal .fa-spinner').addClass("hidden");
+                        if (response.result === "ok") {
+                            $('#related-to-episode-closing-reason-modal').modal('hide');
+                            refreshNotes();
+                        }
+                        else {
+                            $('#related-to-episode-closing-reason-modal .modal-body').html(response);
+                        }
+                    }
+                });
+            });
+
+
+            $('#warning-related-to-episode-closing-reason-modal .confirmclosed').click(function(e) {
+
+
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_closing_reason_canceled' sidebar_obj.id related_to_episode_to_close_obj.id %}",
+                    success: function (response) {
+                        if (response.result === 'ok') {
+                            console.log('Successfully canceled');
+                        }
+                    }
+                });
+            });
+
+            {% endif %}
+
+            {% if is_close_previous_episode %}
+                $('#related-to-episode-closing-reason-modal').modal('show', $(this));
+            {% endif %}
+
+            // Adding a note
+            $('#add-note-modal').on('show.bs.modal', function() {
+                $('#add-note-modal .modal-body').html('Loading...');
+            });
+
+            $('#add-note-modal').on('shown.bs.modal', function() {
+                var comment = $('#input-last-episode-comment').val();
+                var episode = $('#button-last-episode-comment').data('id');
+                $('#input-last-episode-comment').val('');
+                var data = {comment: comment, episode: episode};
+
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_add_note' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    data: data,
+                    success: function (response) {
+                        $('#add-note-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#add-note-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#add-note-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#add-note-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok'){
+                            $('#add-note-modal').modal('hide');
+                            getNotes();
+                        } else {
+                            $('#add-note-modal .modal-body').html(response);
+                        }
+                    }
+                });
+            });
+
+            $('#add-call-modal').on('show.bs.modal', function() {
+                $('#add-call-modal .modal-body').html('Loading...');
+            });
+
+            $('#add-call-modal').on('shown.bs.modal', function() {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'patient_phone_call_ajax_create' sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#add-call-modal .modal-body').html(response);
+                        $('#add-call-modal .modal-body form').attr("data-type", "ajax");
+                    }
+                });
+            });
+
+            $('#add-call-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#add-call-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#add-call-modal .fa-spinner').addClass("hidden");
+                        if (response === 'ok'){
+                            $('#add-call-modal').modal('hide');
+                            var ul = document.getElementById("textMessageWindow");
+                            while(ul.firstChild) ul.removeChild(ul.firstChild);
+                        } else {
+                            $('#add-call-modal .modal-body').html(response);
+                            $('#add-call-modal select').selectize();
+                        }
+                    }
+                });
+            });
+
+
+            // Close case
+            $('#close-case-modal').on('show.bs.modal', function(e) {
+                $('#close-case-modal .modal-body').html('Loading...');
+            });
+
+            $('#close-case-modal').on('shown.bs.modal', function(e) {
+                var comment = $('#input-last-episode-comment').val();
+                var episode = $('#button-last-episode-comment').data('id');
+                $('#input-last-episode-comment').val('');
+                var data = {comment: comment, episode: episode};
+
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_close_case' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    data: data,
+                    success: function (response) {
+                        $('#close-case-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#close-case-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $modal = $('#close-case-modal');
+                var $form = $('form', $modal);
+                console.log('Before ajax call');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('.fa-spinner', $modal).addClass("hidden");
+                        if (response.result === 'ok'){
+                            $modal.modal('hide');
+                            if (response.is_close_previous_episode === true) {
+                                $('#related-to-episode-closing-reason-modal').modal('show', $(this));
+                            }
+                        } else if (response.result === 'rejected'){
+                        	$modal.modal('hide');
+                        	$('#close-case-rejected-modal').modal('show');
+                        } else {
+                            $('.modal-body', $modal).html(response);
+                        }
+                    }
+                });
+            });
+
+            $('#close-case-modal .modal-reject-button').click(function(e) {
+                e.preventDefault();
+                var $modal = $('#close-case-modal');
+                var $form = $('form', $modal);
+                $modal.modal('hide');
+                $('#close-case-rejected-modal').modal('show');
+            });
+
+            // Close case rejected
+            $('#close-case-rejected-modal').on('show.bs.modal', function(e) {
+                $('#close-case-rejected-modal .modal-body').html('Loading...');
+            });
+
+            $('#close-case-rejected-modal').on('shown.bs.modal', function(e) {
+                var $modal = $('#close-case-rejected-modal');
+                var data = {comment: '', episode: ''};
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_close_case_rejected' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    data: data,
+                    success: function (response) {
+                       if (response.result === 'ok'){
+                        	$modal.modal('hide');
+                            var url = "{% url 'patient_inpatient_episode_detail' sidebar_obj.id inpatient_sidebar_obj.id %}";
+                        	window.location.href = url;
+                        } else {
+                            $('#close-case-rejected-modal .modal-body').html(response);
+                        }
+                    }
+                });
+            });
+
+            $('#close-case-rejected-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $modal = $('#close-case-rejected-modal');
+                var $form = $('form', $modal);
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('.fa-spinner', $modal).addClass("hidden");
+                        if (response.result === 'ok'){
+                        	$modal.modal('hide');
+                            var url = "{% url 'patient_inpatient_episode_detail' sidebar_obj.id inpatient_sidebar_obj.id %}";
+                        	window.location.href = url;
+                        } else {
+                           $('.modal-body', $modal).html(response);
+                        }
+                    }
+                });
+            });
+
+            // Reopen case
+            $('#reopen-case-modal').on('show.bs.modal', function(e) {
+                $('#reopen-case-modal .modal-body').html('Loading...');
+            });
+
+            $('#reopen-case-modal').on('shown.bs.modal', function(e) {
+                var comment = $('#input-last-episode-comment').val();
+                var episode = $('#button-last-episode-comment').data('id');
+                $('#input-last-episode-comment').val('');
+                var data = {comment: comment, episode: episode};
+
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_reopen_case' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    data: data,
+                    success: function (response) {
+                        $('#reopen-case-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#reopen-case-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $modal = $('#reopen-case-modal');
+                var $form = $('form', $modal);
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('.fa-spinner', $modal).addClass("hidden");
+                        if (response.result === 'ok'){
+                        	$modal.modal('hide');
+                        } else {
+                            $('.modal-body', $modal).html(response);
+                        }
+                    }
+                });
+            });
+
+            // Discharge case
+            $('#discharge-modal').on('show.bs.modal', function(e) {
+                $('#discharge-modal .modal-body').html('Loading...');
+            });
+
+            $('#discharge-modal').on('shown.bs.modal', function(e) {
+                var comment = $('#input-last-episode-comment').val();
+                var episode = $('#button-last-episode-comment').data('id');
+                $('#input-last-episode-comment').val('');
+                var data = {comment: comment, episode: episode};
+
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_discharge' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    data: data,
+                    success: function (response) {
+                        $('#discharge-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#discharge-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $modal = $('#discharge-modal');
+                var $form = $('form', $modal);
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('.fa-spinner', $modal).addClass("hidden");
+                        if (response.result === 'ok'){
+                            $modal.modal('hide');
+                            window.location.reload();
+                        } else {
+                            $('.modal-body', $modal).html(response);
+                        }
+                    }
+                });
+            });
+
+            $('#transfer-episode-modal').on('show.bs.modal', function(e) {
+                var url = $(e.relatedTarget).data('href');
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    success: function (response) {
+                        $('#transfer-episode-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#transfer-episode-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#transfer-episode-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#transfer-episode-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok') {
+                            $('#transfer-episode-modal').modal('hide');
+                            getEpisodes();
+                            location.reload();
+                        } else {
+                            $('#transfer-episode-modal .modal-body').html(response);
+                        }
+                    }
+                });
+            });
+
+            $('#edit-document-modal').on('show.bs.modal', function(e) {
+                $('#edit-document-modal .modal-body').html('Loading...');
+            });
+
+            $('#edit-document-modal').on('shown.bs.modal', function(e) {
+                var url = $(e.relatedTarget).data('href');
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    success: function (response) {
+                        $('#edit-document-modal .modal-body').html(response);
+                        $("#edit-document-modal .modal-body fieldset").prepend(
+                                '<div class="m-b-md text-left">' +
+                                '    <strong>' + documentName + '</strong>' +
+                                '</div>'
+                        );
+                        $('#edit-document-modal .form-actions').remove();
+                    }
+                });
+            });
+
+            $('#edit-document-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#edit-document-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#edit-document-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok'){
+                            $('#edit-document-modal').modal('hide');
+                            getDocuments();
+                        } else {
+                            $('#edit-document-modal .modal-body').html(response);
+                            $('#edit-document-modal select').selectize();
+                        }
+                    }
+                });
+            });
+
+            $('#delete-document-modal').on('show.bs.modal', function(e) {
+                var title = $(e.relatedTarget).data('title');
+                $('#delete-document-modal .modal-confirm-button').data('href', $(e.relatedTarget).data('href'));
+                $('#delete-document-modal .modal-body').html(
+                        'You are about to delete ' + title +', this procedure is irreversible.'
+                );
+            });
+            $('#delete-document-modal .modal-confirm-button').click(function(e){
+                var url = $(e.target).data('href');
+                $('#delete-document-modal').modal('hide');
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    data: {'csrfmiddlewaretoken': csrftoken},
+                    success: function(response){
+                        $('#delete-document-modal .fa-spinner').addClass("hidden");
+                        getDocuments();
+                    }
+                });
+            });
+
+            $(document).on("keydown", ".task-list-new-task", function(event) {
+                var keyCode = (event.keyCode ? event.keyCode : event.which);
+                if (keyCode == 13) {
+                    $('button', $(this)).trigger('click');
+                }
+            });
+
+            var $documentsList = $('#episode-documents #documents-list-container');
+            var getDocuments = function() {
+                $.get("{% url 'inpatient_episode_documents_ajax' sidebar_obj.id inpatient_sidebar_obj.id %}", {}, function (result) {
+                    $documentsList.html(result);
+                }, "html");
+                {% if user|has_permission:'add_patientdocuments' %}{% endif %}
+                var should_click_post_operation = false;
+                Dropzone.options.documentsDropzone = {
+                    url: "{% url 'inpatient_episode_add_documents_ajax' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    paramName: 'document',
+                    autoProcessQueue: true,
+                    parallelUploads: 1,
+                    uploadMultiple: true,
+                    acceptedFiles: ".csv,.doc,.docx,.dotx,.jpg,.log,.msg,.pdf,.png,.rtf,.tif,.txt,.wav,.xls,.xlsx,.xps",
+                    params: {'csrfmiddlewaretoken': csrftoken},
+                    previewsContainer: false,
+                    processing: function() {
+                    	$("#documents-dropzone i.fa-spinner").show();
+                    },
+                    success: function(event, result) {
+                        $documentsList.html(result);
+                    	$("#documents-dropzone i.fa-spinner").hide();
+                        if (should_click_post_operation) {
+                            dropzoneAutoEdit = $("#dropzone-auto-edit");
+                            if( dropzoneAutoEdit.length ) {
+                                dropzoneAutoEdit.click();
+                            }
+                        }
+                    },
+                    "error": function(file, message, xhr) {
+                        if (xhr == null) this.removeFile(file); // perhaps not remove on xhr errors
+                        alert(message);
+                    },
+                    addedfiles: function(files) {
+                        should_click_post_operation = (files.length === 1);
+                    }
+                };
+            };
+
+            var getNotes = function() {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_notes' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#episode-notes').html(response);
+                        $('.comment-content').readmore({
+                            // collapsedHeight: 100,
+                            // speed: 1000,
+                            moreLink: '<a class="read-more" href="#">Read more</a>',
+                            lessLink: '<a class="read-more" href="#">Close</a>',
+                            afterToggle: function(trigger, element, expanded) {
+                                var $elem = $(element).parent().find(".read-more");
+                                if (expanded) {
+                                    $elem.addClass("read-more-open");
+                                } else {
+                                    $elem.removeClass("read-more-open");
+                                }
+                            }
+                        });
+                    }
+                });
+            };
+
+            var getEpisodes = function () {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_transfers' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#transfers-list').html(response);
+                    }
+                });
+            };
+
+            $(document).on("click", "#transfers-list .endless_page_link", function(e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                $.ajax({
+                    type: "GET",
+                    url: url,
+                    success: function (response) {
+                        $('#transfers-list').html(response);
+                    }
+                });
+            });
+
+            var getLatestDischargeOrders = function() {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_latest_discharge_orders' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#discharge-orders').html(response);
+                    }
+                });
+            };
+
+            var addNewNote = function() {
+                var $element = $("#add-new-note");
+                if ($("#input-add-new-note").val()) {
+                    $.ajax({
+                        data: {
+                            text: $("#input-add-new-note").val(),
+                            csrfmiddlewaretoken: csrftoken
+                        },
+                        type: "POST",
+                        url: $element.data('href'),
+                        success: function(response) {
+                            if (response === 'ok'){
+                                $("#input-add-new-note").val("");
+                                getNotes();
+                            }
+                        }
+                    });
+                }
+            };
+
+            $(document).on("click", "#add-new-note", function(event) {
+                event.preventDefault();
+                addNewNote();
+            });
+
+            $(document).on("keydown", "#input-add-new-note", function(event) {
+                if (event.keyCode === 13) {
+                    addNewNote();
+                }
+            });
+
+            $('#medicalconditions-modal').on('show.bs.modal', function(e) {
+                $('#medicalconditions-modal .modal-body').html('Loading...');
+            });
+
+           $('#medicalconditions-modal').on('shown.bs.modal', function(e) {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_add_medical_condition' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#medicalconditions-modal .modal-body').html(response);
+                    }
+                });
+            });
+
+            $('#medicalconditions-modal .modal-confirm-button').click(function(e) {
+                e.preventDefault();
+                var $form = $('#medicalconditions-modal form');
+                $.ajax({
+                    data: $form.serialize(),
+                    type: "POST",
+                    url: $form.attr('action'),
+                    success: function(response) {
+                        $('#medicalconditions-modal .fa-spinner').addClass("hidden");
+                        if (response.result === 'ok'){
+                            $('#medicalconditions-modal').modal('hide');
+                            getMedicalConditions();
+                        } else {
+                            $('#medicalconditions-modal .modal-body').html(response);
+                        }
+                    }
+                });
+            });
+
+            var getMedicalConditions = function() {
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'inpatient_episode_medical_conditions' sidebar_obj.id inpatient_sidebar_obj.id %}",
+                    success: function (response) {
+                        $('#medical-conditions').html(response);
+                    }
+                });
+            };
+
+            refreshTasks();
+            startTextChatBox();
+            getEpisodes();
+            getNotes();
+            getLatestDischargeOrders();
+            getDocuments();
+            getMedicalConditions();
+        });
+    </script>
+{% endblock %}
+
+{% block extra_body %}
+    {% with modal_id='transfer-episode-modal' modal_title='Transfering a Patient' modal_dismiss_button='Cancel' modal_confirm_button='Transfer' %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='edit-document-modal' modal_title='Editing a Document' modal_dismiss_button='Cancel' modal_confirm_button='Save' %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='delete-document-modal' modal_title='Are you sure you want to delete this document?' modal_dismiss_button='Cancel' modal_confirm_button='Delete' %}
+        {% include 'pilot_v2/fragments/generic/delete_modal.html'%}
+    {% endwith %}
+    {% with modal_id='add-note-modal' modal_title='Creating a Note' modal_dismiss_button='Cancel' modal_confirm_button='Create note' modal_desc="Write your comment below and press 'Create Note' once completed" %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='add-call-modal' modal_title='Creating a Communication' modal_dismiss_button='Cancel' modal_confirm_button='Create Communication' modal_desc='To create a Communication to this patient, complete the form below. Press The "Create Communication" button to create the entry.' %}
+        {% include 'pilot_v2/fragments/generic/modal.html' with modal_extra_class='modal-lg' %}
+    {% endwith %}
+
+    {% if is_case_closer %}
+        {% with modal_id='close-case-modal' modal_title='Close Case' modal_dismiss_button='Cancel' modal_confirm_button='Close Case' modal_desc="Write your comment below and press 'Close Case' once completed" %}
+            {% include 'pilot_v2/fragments/generic/reject_modal.html' %}
+        {% endwith %}
+        {% with modal_id='related-to-episode-closing-reason-modal' modal_title='Closing reason for the previous episode?' modal_dismiss_button='Cancel' modal_confirm_button='Close Episode' modal_desc="Select a closing reason for the previous episode ("|add:related_to_episode_to_close_str|add:"). Press 'Close Episode' button to close the episode." %}
+           {% include 'pilot_v2/fragments/generic/modal.html' %}
+        {% endwith %}
+    {% else %}
+        {% with modal_id='close-case-modal' modal_title='Close Case' modal_dismiss_button='Cancel' modal_confirm_button='Save' modal_desc="Write your comment below and press 'Save' once completed" %}
+            {% include 'pilot_v2/fragments/generic/modal.html' %}
+        {% endwith %}
+    {% endif %}
+    {% with modal_id='close-case-rejected-modal' modal_title='Close Case Rejected' modal_dismiss_button='Cancel' modal_confirm_button='Submit' modal_desc="Assessing defects with the case" %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='reopen-case-modal' modal_title='Re-open Case' modal_dismiss_button='Cancel' modal_confirm_button='Re-open Case' modal_desc="Write your comment below and press 'Re-open Case' once completed" %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='discharge-modal' modal_title='Discharge' modal_dismiss_button='Cancel' modal_confirm_button='Discharge' modal_desc="Write your comment below and press 'Discharge' once completed" %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+    {% with modal_id='medicalconditions-modal' modal_title='' modal_dismiss_button='Cancel' modal_confirm_button='Save' %}
+        {% include 'pilot_v2/fragments/generic/modal.html' %}
+    {% endwith %}
+{% endblock %}
