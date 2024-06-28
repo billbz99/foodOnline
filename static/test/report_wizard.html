@@ -1,0 +1,134 @@
+{% extends "pilot_v2/ui/layouts/back_button.html" %}
+{% load common_tags project_tags %}
+
+{% block main_content %}
+    <div class="row">
+    <div class="col-xs-12 m-t-lg" id="create-report-description">
+            {% block description_paragraph %}{% endblock %}
+        </div>
+        <div class="col-xs-12">
+            <div id="title-form">
+                {% with use_label_as_placeholder=True %}
+                    {% block title_form %}{% endblock %}
+                {% endwith %}
+            </div>
+            {% if object %}
+                <hr>
+            {% endif %}
+        </div>
+        {% if object %}
+            <div class="col-12 col-md-9 mt-lg">
+                <div class="accordion" id="accordion" aria-multiselectable="false">
+                    <div class="panel panel-default accordion-item">
+                        <div class="panel-heading accordion-header" role="tab" id="headingOne">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-bs-toggle="collapse"  data-bs-target="#collapseOne" data-bs-parent="#accordion" aria-expanded="false" aria-controls="collapseOne">
+                                    1. Report settings
+                                </a>
+                                <button class="btn btn-white btn-round btn-xs pull-right next-button">
+                                    Next
+                                </button>
+                            </h4>
+                        </div>
+                        <div id="collapseOne" class="accordion-collapse panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne">
+                            <div class="accordion-body panel-body">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default accordion-item">
+                        <div class="panel-heading accordion-header" role="tab" id="headingTwo">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-bs-toggle="collapse" data-bs-parent="#accordion" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    2. Global Filters
+                                </a>
+                                <button class="btn btn-white btn-round btn-xs pull-right hidden next-button">
+                                    Next
+                                </button>
+                            </h4>
+                        </div>
+                        <div id="collapseTwo" class="accordion-collapse panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+                            <div class="accordion-body panel-body">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default accordion-item">
+                        <div class="panel-heading accordion-header" role="tab" id="headingThree">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-bs-toggle="collapse" data-bs-parent="#accordion" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    3. Sharing/Access
+                                </a>
+                                <button class="btn btn-white btn-round btn-xs pull-right hidden next-button">
+                                    Next
+                                </button>
+                            </h4>
+                        </div>
+                        <div id="collapseThree" class="accordion-collapse panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+                            <div class="accordion-body panel-body">
+
+                            </div>
+                        </div>
+                    </div>
+                     <div class="panel panel-default accordion-item">
+                        <div class="panel-heading accordion-header" role="tab" id="headingFour">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-bs-toggle="collapse" data-bs-parent="#accordion" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                    4. Schedules
+                                </a>
+                                <button class="btn btn-white btn-round btn-xs pull-right hidden next-button">
+                                    Next
+                                </button>
+                            </h4>
+                        </div>
+                        <div id="collapseFour" class="accordion-collapse panel-collapse collapse" role="tabpanel" aria-labelledby="headingFour">
+                            <div class="accordion-body panel-body">
+
+                            </div>
+                        </div>
+                    </div>
+                   <div class="panel panel-default accordion-item">
+                        <div class="panel-heading accordion-header" role="tab" id="headingFive">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-bs-toggle="collapse" data-bs-parent="#accordion" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                    5. Components
+                                </a>
+                            </h4>
+                        </div>
+                        <div id="collapseFive" class="accordion-collapse panel-collapse collapse" role="tabpanel" aria-labelledby="headingFive">
+                            <div class="accordion-body panel-body">
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-md-3 form-with-tips-right m-t-lg">
+                <div id="tips">
+                    {% block tips %}{% endblock %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if object %}
+        <div class="row">
+            <div class="col-xs-12 col-md-9">
+
+                <button id="next-button" class="btn btn-primary btn-round btn-green next-button pull-right" role="button">
+                    Save
+                </button>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block extra_js %}
+    <script src="{{STATIC_URL}}ajax_select/js/ajax_select.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      google.charts.load('current', {packages: ['corechart']});
+    </script>
+{% endblock %}
