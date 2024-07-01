@@ -1,0 +1,66 @@
+Loaded components: 
+
+<style type="text/css">
+    /* show the move cursor as the user moves the mouse over the panel header.*/
+    #draggablePanelList .panel-heading {
+        cursor: move;
+    }
+</style>
+
+<ul class="nav nav-tabs" role="tablist">
+    
+
+        <li role="presentation" class="active">
+            <a href="#tab1" aria-controls="home" role="tab" data-bs-target="tab">Tab 1</a>
+        </li>
+    
+</ul>
+<div class="tab-content">
+    
+
+        <div role="tabpanel" class="tab-pane in active" id="tab1">
+            <a href="javascript:void(0)" id="new-component-btn" class="btn btn-round btn-primary btn-xs pull-right" data-href="/reports/ajax/report/771/sheet/869/new_component/" data-bs-toggle="modal" data-bs-target="#add-new-component-modal">
+                <i class="fa fa-plus"></i> New ComponentW
+            </a>
+
+            <ul id="draggablePanelList" class="list-unstyled">
+                
+                    <li class="panel panel-info">
+                        <div class="panel-heading"><i class="fa fa-ellipsis-v"></i> <i class="fa fa-ellipsis-v"></i> Pilot_V2 | Episode
+                            <div class="pull-right">
+                                
+                                    
+                                        <a href="javascript:void(0)" class="btn btn-round btn-primary btn-xs" data-href="/reports/ajax/component/1064/create/widget/" data-bs-toggle="modal" data-bs-target="#create-component-widget-modal" >
+                                            <i class="fa fa-edit"></i> Create Dashboard Widget
+                                        </a>
+                                    
+                                
+                                
+                                <a href="javascript:void(0)" class="btn btn-round btn-primary btn-xs" data-href="/reports/ajax/component/1064/select/date/" data-bs-toggle="modal" data-bs-target="#select-date-component-filter-modal">
+                                    <i class="fa fa-edit"></i> Choose date field
+                                </a>
+
+                                <a href="javascript:void(0)" class="btn btn-round btn-primary btn-xs" data-href="/reports/ajax/component/1064/edit/columns/" data-bs-toggle="modal" data-bs-target="#edit-components-modal">
+                                    <i class="fa fa-edit"></i> Columns
+                                </a>
+
+                                <a href="javascript:void(0)" class="btn btn-round btn-primary btn-xs" data-href="/reports/ajax/component/1064/edit/filters/" data-bs-toggle="modal" data-bs-target="#edit-filters-modal">
+                                    <i class="fa fa-edit"></i> Filters
+                                </a>
+                                
+                                <a id="delete-button" href="javascript:void(0)" class="btn btn-round btn-danger btn-xs" data-title="Pilot_V2 | Episode" data-href="/reports/ajax/components/1064/delete/" data-bs-toggle="modal" data-bs-target="#delete-component-modal">
+                                    <i class="fa fa-trash fa-fw"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+
+                    </li>
+                
+            </ul>
+
+            <a href="javascript:void(0)" id="delete-tab-btn" class="btn btn-round btn-danger btn-xs pull-right" data-href="/reports/ajax/sheets/869/delete/" data-bs-toggle="modal" data-bs-target="#delete-tab-modal">
+                <i class="fa fa-plus"></i> Delete Tab
+            </a>
+        </div>
+    
+</div>
