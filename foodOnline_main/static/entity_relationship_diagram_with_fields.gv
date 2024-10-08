@@ -1,0 +1,98 @@
+digraph {
+	Account [label="Account
+accountId
+customerId
+accountName
+effDate
+termDate
+statusCode
+situsState
+naicsCode
+hasCustomProgram
+programName
+hasCustomizedUrl
+customUrl
+pin
+customSurvey
+isReleased
+isLinx
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	Customer [label="Customer
+customerId" shape=box]
+	AccountCarrier [label="AccountCarrier
+accountId
+carrierId
+typeCode
+effDate
+termDate
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	Carrier [label="Carrier
+carrierId" shape=box]
+	AccountContact [label="AccountContact
+accountId
+contactId
+typeCode
+refId
+effDate
+termDate
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	Contact [label="Contact
+contactId" shape=box]
+	AccountNote [label="AccountNote
+accountId
+noteId
+typeCode
+note
+effDate
+termDate
+isInstruction
+instructionCode
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	AccountNoteDetail [label="AccountNoteDetail
+accountId
+noteId
+noteLineId
+note
+updateDate
+updateUserId" shape=box]
+	AccountWorker [label="AccountWorker
+accountId
+userId
+roleCode
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	User [label="User
+userId" shape=box]
+	AccountXref [label="AccountXref
+accountId
+altAccountId
+systemCode
+createUserId
+createDate
+updateUserId
+updateDate" shape=box]
+	Account -> Customer
+	AccountCarrier -> Account
+	AccountCarrier -> Carrier
+	AccountContact -> Account
+	AccountContact -> Contact
+	AccountNote -> Account
+	AccountNoteDetail -> Account
+	AccountWorker -> Account
+	AccountWorker -> User
+	AccountXref -> Account
+}
