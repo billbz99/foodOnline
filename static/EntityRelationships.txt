@@ -1,0 +1,31 @@
+Entity Relationships
+Account
+Customer: Many-to-One relationship with Customer (each account is associated with one customer).
+AccountCarrier: One-to-Many relationship with AccountCarrier (each account can have multiple carriers).
+AccountContact: One-to-Many relationship with AccountContact (each account can have multiple contacts).
+AccountNote: One-to-Many relationship with AccountNote (each account can have multiple notes).
+AccountNoteDetail: One-to-Many relationship with AccountNoteDetail (each account can have multiple note details).
+AccountWorker: One-to-Many relationship with AccountWorker (each account can have multiple workers).
+AccountXref: One-to-Many relationship with AccountXref (each account can have multiple cross-references).
+Alias: One-to-Many relationship with Alias (each account can have multiple aliases).
+UnassignedUnetRef: One-to-Many relationship with UnassignedUnetRef (each account can have multiple unassigned references).
+AccountCarrier
+Account: Many-to-One relationship with Account.
+Carrier: Many-to-One relationship with Carrier.
+AccountContact
+Account: Many-to-One relationship with Account.
+Contact: Many-to-One relationship with Contact.
+AccountNote
+Account: Many-to-One relationship with Account.
+AccountNoteDetail
+Account: Many-to-One relationship with Account.
+AccountWorker
+Account: Many-to-One relationship with Account.
+User: Many-to-One relationship with User.
+AccountXref
+Account: Many-to-One relationship with Account.
+Alias
+Account: Many-to-One relationship with Account.
+UnassignedUnetRef
+Account: Many-to-One relationship with Account.
+Package: Many-to-One relationship with Package.
