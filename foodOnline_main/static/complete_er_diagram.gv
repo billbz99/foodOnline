@@ -1,0 +1,133 @@
+digraph G {
+    rankdir=LR;
+    node [shape=box];
+    splines=ortho;
+    
+    // Nodes with all fields
+    Account [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>Account</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>customerId</td></tr>
+            <tr><td>accountName</td></tr>
+            <tr><td>effDate</td></tr>
+            <tr><td>termDate</td></tr>
+            <tr><td>statusCode</td></tr>
+            <tr><td>situsState</td></tr>
+            <tr><td>naicsCode</td></tr>
+            <tr><td>hasCustomProgram</td></tr>
+            <tr><td>programName</td></tr>
+            <tr><td>hasCustomizedUrl</td></tr>
+            <tr><td>customUrl</td></tr>
+            <tr><td>pin</td></tr>
+            <tr><td>customSurvey</td></tr>
+            <tr><td>isReleased</td></tr>
+            <tr><td>isLinx</td></tr>
+        </table>
+    > shape=plain]
+
+    Customer [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>Customer</b></td></tr>
+            <tr><td port="f0">customerId</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountCarrier [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountCarrier</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>carrierId</td></tr>
+            <tr><td>typeCode</td></tr>
+            <tr><td>effDate</td></tr>
+            <tr><td>termDate</td></tr>
+        </table>
+    > shape=plain]
+
+    Carrier [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>Carrier</b></td></tr>
+            <tr><td port="f0">carrierId</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountContact [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountContact</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>contactId</td></tr>
+            <tr><td>typeCode</td></tr>
+            <tr><td>refId</td></tr>
+            <tr><td>effDate</td></tr>
+            <tr><td>termDate</td></tr>
+        </table>
+    > shape=plain]
+
+    Contact [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>Contact</b></td></tr>
+            <tr><td port="f0">contactId</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountNote [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountNote</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>noteId</td></tr>
+            <tr><td>typeCode</td></tr>
+            <tr><td>note</td></tr>
+            <tr><td>effDate</td></tr>
+            <tr><td>termDate</td></tr>
+            <tr><td>isInstruction</td></tr>
+            <tr><td>instructionCode</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountNoteDetail [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountNoteDetail</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>noteId</td></tr>
+            <tr><td>noteLineId</td></tr>
+            <tr><td>note</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountWorker [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountWorker</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>userId</td></tr>
+            <tr><td>roleCode</td></tr>
+        </table>
+    > shape=plain]
+
+    User [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>User</b></td></tr>
+            <tr><td port="f0">userId</td></tr>
+        </table>
+    > shape=plain]
+
+    AccountXref [label=<
+        <table border="0" cellborder="1" cellspacing="0">
+            <tr><td port="title" colspan="1"><b>AccountXref</b></td></tr>
+            <tr><td port="f0">accountId</td></tr>
+            <tr><td>altAccountId</td></tr>
+            <tr><td>systemCode</td></tr>
+        </table>
+    > shape=plain]
+
+    // Relationships with cardinality labels
+    Customer -> Account [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountCarrier [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Carrier -> AccountCarrier [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountContact [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Contact -> AccountContact [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountNote [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountNoteDetail [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountWorker [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    User -> AccountWorker [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+    Account -> AccountXref [label="1:M" dir="both" arrowtail="crow" arrowhead="tee"]
+}
